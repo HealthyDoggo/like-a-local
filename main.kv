@@ -1,0 +1,177 @@
+#:kivy 2.3.0
+
+# --------------------------------------------------
+# Color Palette (hex → normalized RGBA)
+# --------------------------------------------------
+#:set COLOR_BG        (11/255, 37/255, 69/255, 1)     # 0B2545
+#:set COLOR_SURFACE   (33/255, 75/255, 135/255, 1)   # 214B87
+#:set COLOR_ACCENT    (60/255, 127/255, 204/255, 1)  # 3C7FCC
+#:set COLOR_SECONDARY (141/255, 169/255, 196/255, 1) # 8DA9C4
+#:set COLOR_TEXT      (238/255, 244/255, 237/255, 1) # EEF4ED
+
+# --------------------------------------------------
+# Fonts
+# --------------------------------------------------
+#:set FONT_HEADING "Roboto-Bold"
+#:set FONT_BODY "Roboto-Regular"
+
+# --------------------------------------------------
+# Global Widget Styling
+# --------------------------------------------------
+
+<Button>:
+    background_normal: ""
+    background_color: COLOR_ACCENT
+    color: COLOR_TEXT
+    bold: True
+    font_name: FONT_HEADING
+    font_size: "18sp"
+<Label>:
+    font_name: FONT_BODY
+    font_size: "16sp"
+    color: COLOR_TEXT
+<TextInput>:
+    font_name: FONT_BODY
+    font_size: "16sp"
+    color: COLOR_TEXT
+    background_color: COLOR_SECONDARY
+    foreground_color: (0, 0, 0, 1)
+    cursor_color: (0, 0, 0, 1)
+
+# --------------------------------------------------
+# Root Layout
+# --------------------------------------------------
+<RootLayout@BoxLayout>:
+    orientation: "vertical"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+
+# --------------------------------------------------
+# App Bar
+# --------------------------------------------------
+<AppBar@BoxLayout>:
+    size_hint_y: None
+    height: "56dp"
+    padding: "16dp"
+    spacing: "12dp"
+    canvas.before:
+        Color:
+            rgba: COLOR_SURFACE
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    Label:
+        text: "My App"
+        color: COLOR_TEXT
+        bold: True
+        valign: "middle"
+        halign: "left"
+        text_size: self.size
+
+
+# --------------------------------------------------
+# Buttons
+# --------------------------------------------------
+<PrimaryButton@Button>:
+    background_normal: ""
+    background_color: COLOR_ACCENT
+    color: COLOR_TEXT
+    bold: True
+
+<SecondaryButton@Button>:
+    background_normal: ""
+    background_color: COLOR_SECONDARY
+    color: (0, 0, 0, 1)
+
+
+# --------------------------------------------------
+# Card / Panel
+# --------------------------------------------------
+<Card@BoxLayout>:
+    padding: "12dp"
+    spacing: "8dp"
+    canvas.before:
+        Color:
+            rgba: COLOR_SURFACE
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [12]
+
+
+# --------------------------------------------------
+# App Layout
+# --------------------------------------------------
+RootLayout:
+    AppBar:
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "16dp"
+        spacing: "16dp"
+
+        Card:
+            orientation: "vertical"
+
+            Label:
+                text: "Welcome"
+                font_size: "18sp"
+                color: COLOR_TEXT
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            Label:
+                text: "This is a sample card using your colour scheme."
+                color: (COLOR_TEXT[0], COLOR_TEXT[1], COLOR_TEXT[2], 0.7)
+                text_size: self.width, None
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            PrimaryButton:
+                text: "Get Started"
+                size_hint_y: None
+                height: "44dp"
+
+        SecondaryButton:
+            text: "Secondary Action"
+            size_hint_y: None
+            height: "44dp"
+# --------------------------------------------------
+# Screens
+# --------------------------------------------------
+<SignupScreen@Screen>:
+    name: "signup"
+    BoxLayout:
+        orientation: "vertical"
+        padding: "16dp"
+        spacing: "16dp"
+        Label:
+            text: "Signup"
+            font_size: "18sp"
+            color: COLOR_TEXT
+        TextInput:
+            hint_text: "Enter your name"
+            font_size: "16sp"
+            color: COLOR_TEXT
+        TextInput:
+            hint_text: "Enter your email"
+            font_size: "16sp"
+            color: COLOR_TEXT
+        TextInput:
+            hint_text: "Enter your password"
+            font_size: "16sp"
+            color: COLOR_TEXT
+        Button:
+            text: "Signup"
+            size_hint_y: None
+            height: "44dp"
+        Button:
+            text: "Login"
+            size_hint_y: None
+            height: "44dp"

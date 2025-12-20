@@ -1,0 +1,57 @@
+{
+  "tokyo": {
+    "name": "Tokyo",
+    "country": "Japan",
+    "tips": [
+      "Learn a few basic Japanese phrases - locals really appreciate it!",
+      "Get a Suica or Pasmo card for easy train travel",
+      "Visit small ramen shops in residential areas for authentic meals",
+      "Convenience stores (konbini) are amazing and have great food",
+      "Take your shoes off when entering homes and some restaurants"
+    ]
+  },
+  "paris": {
+    "name": "Paris",
+    "country": "France",
+    "tips": [
+      "Say \"Bonjour\" when entering any shop - it's considered polite",
+      "The best croissants are in small neighborhood bakeries",
+      "Museum pass can save you time and money",
+      "Metro is efficient but watch out for pickpockets",
+      "Restaurants outside tourist areas are cheaper and more authentic"
+    ]
+  },
+  "barcelona": {
+    "name": "Barcelona",
+    "country": "Spain",
+    "tips": [
+      "Dinner is typically eaten after 9 PM - restaurants open late",
+      "Book Sagrada Familia tickets online in advance",
+      "Try tapas at local bars in El Born or Gracia neighborhoods",
+      "Learn the difference between Catalan and Spanish culture",
+      "Beach is nice but there are better beaches outside the city"
+    ]
+  },
+  "nyc": {
+    "name": "New York City",
+    "country": "USA",
+    "tips": [
+      "Walk fast and keep to the right on sidewalks",
+      "Get a MetroCard for the subway - fastest way around",
+      "Explore neighborhoods beyond Manhattan for authentic food",
+      "Free museums on certain days - check websites",
+      "Don't eat in Times Square - overpriced tourist traps"
+    ]
+  },
+  "bali": {
+    "name": "Bali",
+    "country": "Indonesia",
+    "tips": [
+      "Dress modestly when visiting temples",
+      "Negotiate prices at markets (except grocery stores)",
+      "Rent a scooter to get around like locals",
+      "Avoid Kuta if you want authentic Balinese experience",
+      "Try local warungs (small restaurants) for cheap amazing food"
+    ]
+  }
+}
