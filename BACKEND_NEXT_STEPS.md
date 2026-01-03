@@ -83,9 +83,89 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ### 2. PC Setup (for Processing)
 
 #### 2.1 Enable Wake-on-LAN
-- Enable WOL in BIOS/UEFI settings
-- Enable WOL in network adapter settings (Windows) or systemd (Linux)
-- Note the MAC address and IP address
+
+**Find Your MAC Address:**
+```bash
+# Windows (PowerShell)
+Get-NetAdapter | Select-Object Name, MacAddress
+
+# Windows (Command Prompt)
+ipconfig /all
+# Look for "Physical Address" under your network adapter
+
+# Linux/Mac
+ip addr show
+# or
+ifconfig
+# Look for "ether" or "HWaddr" - this is your MAC address
+```
+
+**Find Your IP Address:**
+```bash
+# Windows
+ipconfig
+
+# Linux/Mac
+ip addr show
+# or
+hostname -I
+```
+
+**WOL Port Configuration:**
+
+Wake-on-LAN uses **UDP port 9** by default (sometimes port 7). This is usually handled automatically, but here's how to check/configure:
+
+**Windows:**
+1. Open Device Manager
+2. Expand "Network adapters"
+3. Right-click your network adapter → Properties
+4. Go to "Power Management" tab
+5. Check "Allow this device to wake the computer"
+6. Check "Only allow a magic packet to wake the computer" (recommended)
+7. Go to "Advanced" tab
+8. Look for "Wake on Magic Packet" or "Wake on LAN" → Enable it
+9. Port is typically handled by the network adapter driver (default: 9)
+
+**Linux (systemd):**
+```bash
+# Check if WOL is enabled
+sudo ethtool eth0  # or your interface name (use ip addr to find it)
+# Look for "Wake-on: g" (g = magic packet)
+
+# Enable WOL
+sudo ethtool -s eth0 wol g
+
+# Make it persistent (create systemd service or add to /etc/network/interfaces)
+# For systemd-networkd, create:
+sudo nano /etc/systemd/network/50-wired.network
+# Add:
+[Link]
+WakeOnLan=magic
+```
+
+**Mac:**
+1. System Preferences → Energy Saver
+2. Check "Wake for network access"
+3. Port is handled automatically (default: 9)
+
+**Testing WOL Port:**
+```bash
+# From Raspberry Pi, test if port is open (optional - WOL works even if port appears closed)
+nc -u -v <PC_IP> 9
+
+# Or use wakeonlan tool to test
+wakeonlan <MAC_ADDRESS>
+```
+
+**Important Notes:**
+- WOL port (9) is usually **not** a listening port - it's a destination port for the magic packet
+- The PC doesn't need to be "listening" on port 9 - the network adapter handles it at hardware level
+- Most routers/switches forward WOL packets automatically
+- If WOL doesn't work, check:
+  - BIOS/UEFI has WOL enabled
+  - Network adapter has WOL enabled in OS
+  - Router allows WOL packets (some block them)
+  - PC is in sleep/hibernate, not fully shut down (unless "Wake on Power" is enabled)
 
 #### 2.2 Install Dependencies (if processing runs on PC)
 ```bash
@@ -112,7 +192,19 @@ crontab -e
 0 2 * * * cd /path/to/TravelBuddy && /path/to/venv/bin/python -m backend.jobs.nightly_processor
 ```
 
-#### 3.2 Test Manual Processing
+#### 3.2 Populate Test Data
+```bash
+# Populate database with test tips in various languages
+python -m backend.scripts.populate_test_data
+
+# Add only first 10 tips (for quick testing)
+python -m backend.scripts.populate_test_data -n 10
+
+# Clear existing data and repopulate (WARNING: deletes all tips!)
+python -m backend.scripts.populate_test_data --clear
+```
+
+#### 3.3 Test Manual Processing
 ```bash
 # Test the processing job manually
 python -m backend.jobs.nightly_processor
@@ -122,6 +214,9 @@ python -m backend.jobs.nightly_processor --no-wake
 
 # Test promotion only
 python -m backend.jobs.nightly_processor --no-wake --no-promotion
+
+# Time the processing (to measure performance)
+time python -m backend.jobs.nightly_processor --no-wake
 ```
 
 ### 4. App Configuration
@@ -141,15 +236,31 @@ export TRAVELBUDDY_API_URL=http://raspberry-pi-ip:8000
 
 ### 5. Testing Checklist
 
+#### 5.1 Initial Setup
 - [ ] API server starts successfully
 - [ ] Database connection works
 - [ ] Can submit tip via API
 - [ ] Can query tips via API
-- [ ] Wake-on-LAN successfully wakes PC
+
+#### 5.2 Test Data Population
+- [ ] Run populate script: `python -m backend.scripts.populate_test_data`
+- [ ] Verify tips are in database with "pending" status
+- [ ] Check tips in various languages were added
+
+#### 5.3 Processing Tests
+- [ ] Wake-on-LAN successfully wakes PC (if testing with WOL)
 - [ ] Nightly job processes tips correctly
 - [ ] Translation works for non-English tips
 - [ ] Embeddings are generated and stored
+- [ ] Check processing times (use `time` command)
+- [ ] Verify tips status changed to "processed"
+
+#### 5.4 Promotion Tests
 - [ ] Tip promotion logic works
+- [ ] Similar tips are grouped correctly
+- [ ] Promoted tips appear in tip_promotions table
+
+#### 5.5 App Integration
 - [ ] App can connect to API
 - [ ] App can submit tips
 - [ ] App can fetch processed tips
