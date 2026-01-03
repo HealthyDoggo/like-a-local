@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     pc_ip_address: str = os.getenv("PC_IP_ADDRESS", "")
     pc_port: int = int(os.getenv("PC_PORT", "9"))
     
+    # PC Processing API configuration
+    pc_processing_api_url: Optional[str] = os.getenv("PC_PROCESSING_API_URL", None)
+    pc_processing_api_port: int = int(os.getenv("PC_PROCESSING_API_PORT", "8001"))
+    
     # Processing configuration
     processing_schedule: str = os.getenv("PROCESSING_SCHEDULE", "0 2 * * *")  # 2 AM daily
     
