@@ -11,8 +11,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Default values
-DB_NAME="travelbuddy"
-DB_USER="travelbuddy"
+DB_NAME="likealocal"
+DB_USER="likealocal"
 DB_PASSWORD=""
 SCHEMA_FILE="database/schema.sql"
 SKIP_USER_CREATE=false
@@ -62,8 +62,8 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --db-name NAME          Database name (default: travelbuddy)"
-            echo "  --db-user USER          Database user (default: travelbuddy)"
+            echo "  --db-name NAME          Database name (default: likealocal)"
+            echo "  --db-user USER          Database user (default: likealocal)"
             echo "  --db-password PASSWORD  Database password (will prompt if not provided)"
             echo "  --schema-file PATH      Path to schema file (default: database/schema.sql)"
             echo "  --skip-user-create      Skip user creation (user already exists)"
