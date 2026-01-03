@@ -16,6 +16,7 @@ sentence-transformers==2.2.2
 transformers==4.36.0
 torch==2.1.1
 huggingface-hub <= 0.20.3
+langdetect==1.0.9
 
 # Wake-on-LAN
 wakeonlan==1.1.6

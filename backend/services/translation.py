@@ -1,4 +1,4 @@
-"""NLLB translation service"""
+"""NLLB translation service with proper language detection"""
 import logging
 from typing import List, Optional
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -6,6 +6,14 @@ import torch
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Try to import langdetect for proper language detection
+try:
+    from langdetect import detect, detect_langs, LangDetectException
+    LANGDETECT_AVAILABLE = True
+except ImportError:
+    LANGDETECT_AVAILABLE = False
+    logger.warning("langdetect not available - using fallback detection")
 
 # Language code mapping for common languages
 LANGUAGE_CODES = {
@@ -61,24 +69,58 @@ class TranslationService:
             raise
     
     def detect_language(self, text: str) -> Optional[str]:
-        """Detect language of text (simplified - returns ISO code)"""
-        # Simple heuristic: check for common language patterns
-        # In production, use a proper language detection library like langdetect
+        """
+        Detect language of text using proper language detection.
+        
+        Uses langdetect library if available, falls back to heuristics otherwise.
+        
+        Args:
+            text: Text to detect language for
+            
+        Returns:
+            ISO 639-1 language code (e.g., "en", "es", "fr")
+        """
+        if not text or len(text.strip()) < 3:
+            return "en"  # Default for very short text
+        
+        # Use langdetect if available (proper detection)
+        if LANGDETECT_AVAILABLE:
+            try:
+                detected = detect(text)
+                logger.debug(f"Detected language: {detected} for text: {text[:50]}...")
+                return detected
+            except LangDetectException as e:
+                logger.warning(f"Language detection failed: {e}, using fallback")
+                # Fall through to heuristic
+            except Exception as e:
+                logger.warning(f"Language detection error: {e}, using fallback")
+                # Fall through to heuristic
+        
+        # Fallback heuristic (if langdetect not available or fails)
         text_lower = text.lower()
         
         # Check for common words/patterns
-        if any(word in text_lower for word in ["the", "and", "is", "are", "was", "were"]):
+        if any(word in text_lower for word in ["the", "and", "is", "are", "was", "were", "this", "that"]):
             return "en"
-        elif any(word in text_lower for word in ["el", "la", "de", "que", "y", "es"]):
+        elif any(word in text_lower for word in ["el", "la", "de", "que", "y", "es", "un", "una", "los", "las"]):
             return "es"
-        elif any(word in text_lower for word in ["le", "de", "et", "est", "un", "une"]):
+        elif any(word in text_lower for word in ["le", "de", "et", "est", "un", "une", "les", "des", "dans"]):
             return "fr"
-        elif any(word in text_lower for word in ["der", "die", "das", "und", "ist", "sind"]):
+        elif any(word in text_lower for word in ["der", "die", "das", "und", "ist", "sind", "den", "dem"]):
             return "de"
-        elif any(word in text_lower for word in ["il", "la", "di", "e", "è", "un", "una"]):
+        elif any(word in text_lower for word in ["il", "la", "di", "e", "è", "un", "una", "del", "della"]):
             return "it"
+        elif any(word in text_lower for word in ["o", "a", "de", "do", "da", "em", "um", "uma", "os", "as"]):
+            return "pt"
+        elif any(word in text_lower for word in ["の", "は", "が", "を", "に", "で", "と", "から"]):
+            return "ja"
+        elif any(word in text_lower for word in ["的", "是", "在", "有", "和", "了", "我", "你"]):
+            return "zh"
+        elif any(word in text_lower for word in ["이", "가", "을", "를", "에", "에서", "와", "과"]):
+            return "ko"
         
         # Default to English if uncertain
+        logger.debug(f"Could not detect language, defaulting to English")
         return "en"
     
     def translate(self, text: str, source_language: Optional[str] = None) -> str:
