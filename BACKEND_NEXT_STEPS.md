@@ -19,6 +19,26 @@ All core backend components have been implemented:
 ### 1. Deployment Setup (Raspberry Pi)
 
 #### 1.1 Database Setup
+
+**Option A: Automated Setup (Recommended)**
+```bash
+# On Raspberry Pi
+sudo apt-get update
+sudo apt-get install postgresql postgresql-contrib
+
+# Run the automated setup script
+cd ~/TravelBuddy/backend
+./scripts/setup_database.sh
+
+# Or with custom options
+./scripts/setup_database.sh --db-name travelbuddy --db-user travelbuddy
+# (will prompt for password)
+
+# Or specify password directly
+./scripts/setup_database.sh --db-password 'your_password'
+```
+
+**Option B: Manual Setup**
 ```bash
 # On Raspberry Pi
 sudo apt-get update
@@ -30,7 +50,91 @@ CREATE DATABASE travelbuddy;
 CREATE USER travelbuddy WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE travelbuddy TO travelbuddy;
 \q
+```
 
+#### 1.1a Verify and Fix Database Permissions
+
+**Check if user exists and verify password:**
+```bash
+# Connect as postgres user
+sudo -u postgres psql
+
+# List all users
+\du
+
+# Check user privileges
+SELECT usename, usecreatedb, usesuper FROM pg_user WHERE usename = 'travelbuddy';
+
+# If user doesn't exist or needs fixing:
+CREATE USER travelbuddy WITH PASSWORD 'your_password';
+ALTER USER travelbuddy CREATEDB;  # Allow creating databases (optional)
+```
+
+**Grant proper permissions:**
+```bash
+# Connect as postgres
+sudo -u postgres psql -d travelbuddy
+
+# Grant all privileges on database
+GRANT ALL PRIVILEGES ON DATABASE travelbuddy TO travelbuddy;
+
+# Grant privileges on schema (important!)
+GRANT ALL ON SCHEMA public TO travelbuddy;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO travelbuddy;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO travelbuddy;
+
+# If tables already exist, grant on existing tables
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO travelbuddy;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO travelbuddy;
+
+# Grant usage on schema
+GRANT USAGE ON SCHEMA public TO travelbuddy;
+
+\q
+```
+
+**Test connection with your .env credentials:**
+```bash
+# Test connection (replace with your actual values from .env)
+psql -U travelbuddy -d travelbuddy -h localhost
+
+# Or with password
+PGPASSWORD='your_password' psql -U travelbuddy -d travelbuddy -h localhost
+
+# If connection works, try creating a test table
+CREATE TABLE test_permissions (id SERIAL PRIMARY KEY);
+DROP TABLE test_permissions;
+```
+
+**If you get "permission denied" errors, run this complete fix:**
+```bash
+sudo -u postgres psql -d travelbuddy << 'EOF'
+-- Grant schema privileges
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO travelbuddy;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO travelbuddy;
+
+-- Grant on existing objects
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO travelbuddy;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO travelbuddy;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO travelbuddy;
+
+-- Make user owner of schema (most permissive)
+ALTER SCHEMA public OWNER TO travelbuddy;
+EOF
+```
+
+**Verify .env file matches:**
+```bash
+# Check your .env file
+cat backend/.env | grep DATABASE_URL
+
+# Should look like:
+# DATABASE_URL=postgresql://travelbuddy:your_password@localhost:5432/travelbuddy
+# Format: postgresql://username:password@host:port/database
+```
+
+#### 1.1b Run Schema
+```bash
 # Run schema - Option 1: As postgres user (recommended)
 sudo -u postgres psql -d travelbuddy -f backend/database/schema.sql
 
@@ -301,9 +405,16 @@ export TRAVELBUDDY_API_URL=http://raspberry-pi-ip:8000
 
 ### Common Issues
 
-1. **Database Connection Failed**
+1. **Database Connection Failed / Permission Denied**
    - Check PostgreSQL is running: `sudo systemctl status postgresql`
-   - Verify connection string in `.env`
+   - Verify connection string in `.env` matches actual user/password
+   - Test connection: `psql -U travelbuddy -d travelbuddy -h localhost`
+   - Grant permissions (see section 1.1a above):
+     ```bash
+     sudo -u postgres psql -d travelbuddy -c "GRANT ALL ON SCHEMA public TO travelbuddy;"
+     sudo -u postgres psql -d travelbuddy -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO travelbuddy;"
+     ```
+   - Verify user exists: `sudo -u postgres psql -c "\du"`
    - Check firewall rules
 
 2. **Wake-on-LAN Not Working**
