@@ -1,17 +1,22 @@
 #:kivy 2.3.0
 
 # --------------------------------------------------
-# Color Palette (hex → normalized RGBA)
+# Color Palette - Based on USER_FLOW.md (Dark blue theme)
+# Easy to change: just update these hex values!
 # --------------------------------------------------
-#:set COLOR_BG        (11/255, 37/255, 69/255, 1)     # 0B2545
-#:set COLOR_SURFACE   (33/255, 75/255, 135/255, 1)   # 214B87
-#:set COLOR_ACCENT    (60/255, 127/255, 204/255, 1)  # 3C7FCC
-#:set COLOR_SECONDARY (141/255, 169/255, 196/255, 1) # 8DA9C4
-#:set COLOR_TEXT      (238/255, 244/255, 237/255, 1) # EEF4ED
+#:set COLOR_PRIMARY   (60/255, 127/255, 204/255, 1)   # 3C7FCC - Bright blue
+#:set COLOR_SECONDARY (33/255, 75/255, 135/255, 1)    # 214B87 - Medium blue
+#:set COLOR_DARK      (11/255, 37/255, 69/255, 1)     # 0B2545 - Dark blue
+#:set COLOR_LIGHT     (141/255, 169/255, 196/255, 1)  # 8DA9C4 - Light blue
+#:set COLOR_BG_DARK   (11/255, 37/255, 69/255, 1)     # 0B2545 - Dark blue background
+#:set COLOR_BG_LIGHT  (238/255, 244/255, 237/255, 1)  # EEF4ED - Off-white background
+#:set COLOR_TEXT_DARK (11/255, 37/255, 69/255, 1)     # 0B2545
+#:set COLOR_TEXT_LIGHT (238/255, 244/255, 237/255, 1) # EEF4ED
 
 # --------------------------------------------------
 # Fonts
 # --------------------------------------------------
+#:set FONT_HEADING_SERIF "Georgia"
 #:set FONT_HEADING "Roboto-Bold"
 #:set FONT_BODY "Roboto-Regular"
 
@@ -21,157 +26,455 @@
 
 <Button>:
     background_normal: ""
-    background_color: COLOR_ACCENT
-    color: COLOR_TEXT
-    bold: True
-    font_name: FONT_HEADING
-    font_size: "18sp"
+    background_color: COLOR_PRIMARY
+    color: COLOR_TEXT_LIGHT
+    bold: False
+    font_name: FONT_BODY
+    font_size: "16sp"
+
 <Label>:
     font_name: FONT_BODY
     font_size: "16sp"
-    color: COLOR_TEXT
+    color: COLOR_TEXT_LIGHT  # Default to light text for dark backgrounds
+
 <TextInput>:
     font_name: FONT_BODY
     font_size: "16sp"
-    color: COLOR_TEXT
-    background_color: COLOR_SECONDARY
-    foreground_color: (0, 0, 0, 1)
-    cursor_color: (0, 0, 0, 1)
-
-# --------------------------------------------------
-# Root Layout
-# --------------------------------------------------
-<RootLayout@BoxLayout>:
-    orientation: "vertical"
-    canvas.before:
-        Color:
-            rgba: COLOR_BG
-        Rectangle:
-            pos: self.pos
-            size: self.size
-
-
-# --------------------------------------------------
-# App Bar
-# --------------------------------------------------
-<AppBar@BoxLayout>:
-    size_hint_y: None
-    height: "56dp"
-    padding: "16dp"
-    spacing: "12dp"
-    canvas.before:
-        Color:
-            rgba: COLOR_SURFACE
-        Rectangle:
-            pos: self.pos
-            size: self.size
-
-    Label:
-        text: "My App"
-        color: COLOR_TEXT
-        bold: True
-        valign: "middle"
-        halign: "left"
-        text_size: self.size
-
-
-# --------------------------------------------------
-# Buttons
-# --------------------------------------------------
-<PrimaryButton@Button>:
+    background_color: (1, 1, 1, 1)
+    foreground_color: COLOR_TEXT_DARK
+    cursor_color: COLOR_PRIMARY
+    padding: [12, 12]
+    multiline: False
     background_normal: ""
-    background_color: COLOR_ACCENT
-    color: COLOR_TEXT
-    bold: True
-
-<SecondaryButton@Button>:
-    background_normal: ""
-    background_color: COLOR_SECONDARY
-    color: (0, 0, 0, 1)
-
-
-# --------------------------------------------------
-# Card / Panel
-# --------------------------------------------------
-<Card@BoxLayout>:
-    padding: "12dp"
-    spacing: "8dp"
+    background_active: ""
     canvas.before:
         Color:
-            rgba: COLOR_SURFACE
+            rgba: (1, 1, 1, 1)
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [12]
+            radius: [8]
+        Color:
+            rgba: COLOR_PRIMARY if self.focus else (0.8, 0.8, 0.8, 1)
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, 8)
+            width: 2 if self.focus else 1
+
+# --------------------------------------------------
+# Custom Components
+# --------------------------------------------------
+
+# Modern rounded button
+<RoundedButton@Button>:
+    size_hint_y: None
+    height: "48dp"
+    background_normal: ""
+    background_color: COLOR_PRIMARY
+    color: COLOR_TEXT_LIGHT
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [24]
+
+# Chip/Tag button for answer display
+<AnswerChip@Button>:
+    size_hint: None, None
+    height: "36dp"
+    background_normal: ""
+    background_color: COLOR_LIGHT
+    color: COLOR_TEXT_DARK
+    padding: [16, 0]
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [18]
+
+# Bottom nav button
+<NavButton@Button>:
+    background_normal: ""
+    background_color: (0, 0, 0, 0)
+    color: COLOR_LIGHT
+    font_size: "28sp"
+    bold: False
+
+# Bottom Navigation Bar
+<BottomNav@BoxLayout>:
+    size_hint_y: None
+    height: "60dp"
+    canvas.before:
+        Color:
+            rgba: COLOR_SECONDARY
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    NavButton:
+        text: "✈️"
+        on_press: app.root.current = "travel"
+
+    NavButton:
+        text: "⚙️"
+        on_press: app.root.current = "settings"
+
+# Card with shadow effect
+<Card@BoxLayout>:
+    orientation: "vertical"
+    padding: "20dp"
+    spacing: "12dp"
+    size_hint_y: None
+    canvas.before:
+        Color:
+            rgba: (1, 1, 1, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [16]
 
 
 # --------------------------------------------------
-# App Layout
+# Signup Screen - Page 1: "Where are you from?"
 # --------------------------------------------------
-RootLayout:
-    AppBar:
+<SignupPage1>:
+    name: "signup_page1"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG_DARK
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
     BoxLayout:
         orientation: "vertical"
-        padding: "16dp"
-        spacing: "16dp"
+        padding: "40dp"
+        spacing: "40dp"
 
-        Card:
-            orientation: "vertical"
-
-            Label:
-                text: "Welcome"
-                font_size: "18sp"
-                color: COLOR_TEXT
-                size_hint_y: None
-                height: self.texture_size[1]
-
-            Label:
-                text: "This is a sample card using your colour scheme."
-                color: (COLOR_TEXT[0], COLOR_TEXT[1], COLOR_TEXT[2], 0.7)
-                text_size: self.width, None
-                size_hint_y: None
-                height: self.texture_size[1]
-
-            PrimaryButton:
-                text: "Get Started"
-                size_hint_y: None
-                height: "44dp"
-
-        SecondaryButton:
-            text: "Secondary Action"
-            size_hint_y: None
-            height: "44dp"
-# --------------------------------------------------
-# Screens
-# --------------------------------------------------
-<SignupScreen@Screen>:
-    name: "signup"
-    BoxLayout:
-        orientation: "vertical"
-        padding: "16dp"
-        spacing: "16dp"
+        # Large serif question at top, centered
         Label:
-            text: "Signup"
-            font_size: "18sp"
-            color: COLOR_TEXT
-        TextInput:
-            hint_text: "Enter your name"
-            font_size: "16sp"
-            color: COLOR_TEXT
-        TextInput:
-            hint_text: "Enter your email"
-            font_size: "16sp"
-            color: COLOR_TEXT
-        TextInput:
-            hint_text: "Enter your password"
-            font_size: "16sp"
-            color: COLOR_TEXT
-        Button:
-            text: "Signup"
-            size_hint_y: None
-            height: "44dp"
-        Button:
-            text: "Login"
-            size_hint_y: None
-            height: "44dp"
+            text: "Where are you from?"
+            font_name: FONT_HEADING_SERIF
+            font_size: "32sp"
+            color: COLOR_TEXT_LIGHT
+            bold: True
+            size_hint_y: 0.3
+            halign: "center"
+            valign: "middle"
+            text_size: self.size
+
+        # Country and City dropdowns
+        BoxLayout:
+            orientation: "vertical"
+            spacing: "20dp"
+            size_hint_y: 0.5
+
+            # Country spinner
+            Spinner:
+                id: country_spinner
+                text: "Select Country"
+                values: []
+                size_hint_y: None
+                height: "48dp"
+                background_normal: ""
+                background_color: (1, 1, 1, 1)
+                color: COLOR_TEXT_DARK
+                on_text: root.on_country_selected()
+
+            # City spinner
+            Spinner:
+                id: city_spinner
+                text: "Select City"
+                values: []
+                size_hint_y: None
+                height: "48dp"
+                background_normal: ""
+                background_color: (1, 1, 1, 1)
+                color: COLOR_TEXT_DARK
+                disabled: True
+
+        # Next button
+        BoxLayout:
+            size_hint_y: 0.2
+
+            RoundedButton:
+                text: "Next"
+                on_press: root.go_to_page2()
+
+
+# --------------------------------------------------
+# Signup Screen - Page 2: "What would you like tourists to do less?"
+# --------------------------------------------------
+<SignupPage2>:
+    name: "signup_page2"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG_DARK
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "40dp"
+        spacing: "30dp"
+
+        # Large serif question at top, centered
+        Label:
+            text: "What would you like tourists to do less?"
+            font_name: FONT_HEADING_SERIF
+            font_size: "28sp"
+            color: COLOR_TEXT_LIGHT
+            bold: True
+            size_hint_y: 0.25
+            halign: "center"
+            valign: "middle"
+            text_size: self.size
+
+        # Three textboxes minimum (only one required)
+        ScrollView:
+            do_scroll_x: False
+            size_hint_y: 0.6
+
+            BoxLayout:
+                orientation: "vertical"
+                spacing: "16dp"
+                size_hint_y: None
+                height: self.minimum_height
+                padding: [0, 10]
+
+                TextInput:
+                    id: annoyance1
+                    hint_text: "First annoyance (required)"
+                    size_hint_y: None
+                    height: "48dp"
+                    multiline: False
+
+                TextInput:
+                    id: annoyance2
+                    hint_text: "Second annoyance (optional)"
+                    size_hint_y: None
+                    height: "48dp"
+                    multiline: False
+
+                TextInput:
+                    id: annoyance3
+                    hint_text: "Third annoyance (optional)"
+                    size_hint_y: None
+                    height: "48dp"
+                    multiline: False
+
+                # Additional textboxes container
+                BoxLayout:
+                    id: additional_annoyances
+                    orientation: "vertical"
+                    spacing: "16dp"
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                Button:
+                    text: "+ Add More"
+                    size_hint_y: None
+                    height: "44dp"
+                    background_color: COLOR_LIGHT
+                    on_press: root.add_more_textbox()
+
+        # Submit button
+        BoxLayout:
+            size_hint_y: 0.15
+
+            RoundedButton:
+                text: "Submit"
+                on_press: root.submit_signup()
+
+
+# --------------------------------------------------
+# Home/Travel Screen - "Where are you going?"
+# --------------------------------------------------
+<TravelScreen>:
+    name: "travel"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG_DARK
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "40dp"
+        spacing: "30dp"
+
+        # Large serif question at top, centered
+        Label:
+            text: "Where are you going?"
+            font_name: FONT_HEADING_SERIF
+            font_size: "32sp"
+            color: COLOR_TEXT_LIGHT
+            bold: True
+            size_hint_y: 0.2
+            halign: "center"
+            valign: "middle"
+            text_size: self.size
+
+        # Country and City search
+        BoxLayout:
+            orientation: "vertical"
+            spacing: "20dp"
+            size_hint_y: 0.3
+
+            # Country spinner
+            Spinner:
+                id: country_spinner
+                text: "Select Country"
+                values: []
+                size_hint_y: None
+                height: "48dp"
+                background_normal: ""
+                background_color: (1, 1, 1, 1)
+                color: COLOR_TEXT_DARK
+                on_text: root.on_country_selected()
+
+            # City spinner
+            Spinner:
+                id: city_spinner
+                text: "Select City"
+                values: []
+                size_hint_y: None
+                height: "48dp"
+                background_normal: ""
+                background_color: (1, 1, 1, 1)
+                color: COLOR_TEXT_DARK
+                disabled: True
+
+            RoundedButton:
+                text: "Search"
+                on_press: root.search_city()
+
+        # Results area
+        ScrollView:
+            id: results_scroll
+            do_scroll_x: False
+
+            BoxLayout:
+                id: results_container
+                orientation: "vertical"
+                spacing: "12dp"
+                padding: "0dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+        # Bottom nav
+        BottomNav:
+
+
+# --------------------------------------------------
+# Settings Screen
+# --------------------------------------------------
+<SettingsScreen>:
+    name: "settings"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG_DARK
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "40dp"
+        spacing: "30dp"
+
+        # Header
+        Label:
+            text: "Settings"
+            font_name: FONT_HEADING_SERIF
+            font_size: "32sp"
+            color: COLOR_TEXT_LIGHT
+            bold: True
+            size_hint_y: 0.15
+            halign: "center"
+            valign: "middle"
+            text_size: self.size
+
+        # Settings content
+        BoxLayout:
+            orientation: "vertical"
+            spacing: "20dp"
+            size_hint_y: 0.7
+
+            # Dark Mode Toggle
+            BoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "60dp"
+                padding: "20dp"
+                spacing: "20dp"
+                canvas.before:
+                    Color:
+                        rgba: COLOR_SECONDARY
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [12]
+
+                Label:
+                    text: "Dark Mode"
+                    font_size: "18sp"
+                    color: COLOR_TEXT_LIGHT
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: dark_mode_toggle
+                    size_hint_x: None
+                    width: "48dp"
+                    active: True
+                    on_active: root.toggle_dark_mode()
+
+            # Edit Profile Button
+            RoundedButton:
+                text: "Edit Profile"
+                on_press: root.edit_profile()
+                size_hint_y: None
+                height: "48dp"
+
+            # About section
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: "80dp"
+                padding: "20dp"
+                spacing: "8dp"
+                canvas.before:
+                    Color:
+                        rgba: COLOR_SECONDARY
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [12]
+
+                Label:
+                    text: "About"
+                    font_size: "14sp"
+                    color: COLOR_LIGHT
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: "left"
+                    text_size: self.width, None
+
+                Label:
+                    text: "TravelBuddy v1.0"
+                    font_size: "16sp"
+                    color: COLOR_TEXT_LIGHT
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    halign: "left"
+                    text_size: self.width, None
+
+        # Bottom nav
+        BottomNav:

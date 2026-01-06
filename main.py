@@ -5,465 +5,340 @@ Helps users discover local insights about their dream destinations
 
 from kivy.app import App
 from kivy.lang import Builder
-from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.popup import Popup
 from kivy.uix.textinput import TextInput
-from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
 import json
 import os
 from api_client import get_api_client
 
-# migrate to kv
-class SignupScreen(Screen):
-    """Screen for user signup and survey"""
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.name = 'signup'
-        pass
-        # Main layout
-        layout = BoxLayout(orientation='vertical', padding=40, spacing=20)
-        
-        # Title
-        title = Label(
-            text='Welcome to TravelBuddy!',
-            font_size='32sp',
-            size_hint_y=0.15,
-            bold=True
-        )
-        layout.add_widget(title)
-        
-        # Survey form
-        form_layout = GridLayout(cols=1, spacing=15, size_hint_y=0.7)
-        
-        # Name
-        form_layout.add_widget(Label(text='What\'s your name?', size_hint_y=None, height=40))
-        self.name_input = TextInput(
-            multiline=False,
-            size_hint_y=None,
-            height=40,
-            hint_text='Enter your name'
-        )
-        form_layout.add_widget(self.name_input)
-        
-        # Hometown
-        form_layout.add_widget(Label(text='Where are you from? (Hometown)', size_hint_y=None, height=40))
-        self.hometown_input = TextInput(
-            multiline=False,
-            size_hint_y=None,
-            height=40,
-            hint_text='e.g., San Francisco, USA'
-        )
-        form_layout.add_widget(self.hometown_input)
-        
-        # Current location
-        form_layout.add_widget(Label(text='Where do you currently live?', size_hint_y=None, height=40))
-        self.current_location_input = TextInput(
-            multiline=False,
-            size_hint_y=None,
-            height=40,
-            hint_text='e.g., New York, USA'
-        )
-        form_layout.add_widget(self.current_location_input)
-        
-        layout.add_widget(form_layout)
-        
-        # Submit button
-        submit_btn = Button(
-            text='Start Exploring',
-            size_hint_y=0.15,
-            background_color=(0.2, 0.6, 0.8, 1),
-            font_size='20sp'
-        )
-        submit_btn.bind(on_press=self.submit_signup)
-        layout.add_widget(submit_btn)
-        
-        self.add_widget(layout)
-    
-    def submit_signup(self, instance):
-        """Save user data and navigate to destinations screen"""
-        user_data = {
-            'name': self.name_input.text,
-            'hometown': self.hometown_input.text,
-            'current_location': self.current_location_input.text
-        }
-        
-        # Save user data
-        with open('user_data.json', 'w') as f:
-            json.dump(user_data, f)
-        
-        # Navigate to destinations screen
-        self.manager.current = 'destinations'
+# Sample country-city data (in a real app, use a proper API or library)
+COUNTRY_CITIES = {
+    "United States": ["New York", "Los Angeles", "Chicago", "San Francisco", "Miami", "Seattle", "Boston"],
+    "United Kingdom": ["London", "Manchester", "Birmingham", "Edinburgh", "Glasgow", "Liverpool"],
+    "France": ["Paris", "Marseille", "Lyon", "Toulouse", "Nice", "Nantes"],
+    "Spain": ["Madrid", "Barcelona", "Valencia", "Seville", "Bilbao", "Malaga"],
+    "Italy": ["Rome", "Milan", "Naples", "Turin", "Florence", "Venice"],
+    "Germany": ["Berlin", "Munich", "Frankfurt", "Hamburg", "Cologne", "Stuttgart"],
+    "Japan": ["Tokyo", "Osaka", "Kyoto", "Yokohama", "Nagoya", "Sapporo"],
+    "China": ["Beijing", "Shanghai", "Guangzhou", "Shenzhen", "Chengdu", "Hangzhou"],
+    "Canada": ["Toronto", "Vancouver", "Montreal", "Calgary", "Ottawa", "Edmonton"],
+    "Australia": ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Gold Coast"],
+    "Brazil": ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador", "Fortaleza", "Belo Horizonte"],
+    "Mexico": ["Mexico City", "Guadalajara", "Monterrey", "Cancún", "Puebla", "Tijuana"],
+    "India": ["Mumbai", "Delhi", "Bangalore", "Kolkata", "Chennai", "Hyderabad"],
+    "Thailand": ["Bangkok", "Chiang Mai", "Phuket", "Pattaya", "Krabi", "Ayutthaya"],
+    "Netherlands": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven", "Groningen"],
+}
 
 
-class DestinationsScreen(Screen):
-    """Screen showing available destinations"""
-    
+class SignupPage1(Screen):
+    """First signup page: Where are you from?"""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = 'destinations'
-        
-        # Main layout
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
-        
-        # Header
-        header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.1, spacing=10)
-        
-        title = Label(
-            text='Where do you want to travel?',
-            font_size='24sp',
-            bold=True,
-            size_hint_x=0.8
-        )
-        header_layout.add_widget(title)
-        
-        # Back button (to edit profile)
-        back_btn = Button(
-            text='Edit Profile',
-            size_hint_x=0.2,
-            background_color=(0.5, 0.5, 0.5, 1)
-        )
-        back_btn.bind(on_press=lambda x: setattr(self.manager, 'current', 'signup'))
-        header_layout.add_widget(back_btn)
-        
-        layout.add_widget(header_layout)
-        
-        # Scrollable destination list
-        scroll = ScrollView(size_hint=(1, 0.9))
-        self.destinations_layout = GridLayout(
-            cols=1,
-            spacing=10,
-            size_hint_y=None,
-            padding=10
-        )
-        self.destinations_layout.bind(minimum_height=self.destinations_layout.setter('height'))
-        
-        scroll.add_widget(self.destinations_layout)
-        layout.add_widget(scroll)
-        
-        self.add_widget(layout)
-    
+
     def on_enter(self):
-        """Load destinations when screen is displayed"""
-        self.load_destinations()
-    
-    def load_destinations(self):
-        """Load and display destinations"""
-        self.destinations_layout.clear_widgets()
-        
-        # Load destinations from JSON file
-        destinations = self.load_destinations_data()
-        
-        for dest_id, dest_data in destinations.items():
-            # Create destination button
-            btn_layout = BoxLayout(
-                orientation='vertical',
-                size_hint_y=None,
-                height=120,
-                padding=10
-            )
-            
-            dest_btn = Button(
-                text=f"{dest_data['name']}\n{dest_data['country']}",
-                font_size='18sp',
-                background_color=(0.2, 0.6, 0.8, 1),
-                size_hint_y=None,
-                height=100
-            )
-            dest_btn.bind(on_press=lambda x, d=dest_id: self.show_destination_details(d))
-            
-            btn_layout.add_widget(dest_btn)
-            self.destinations_layout.add_widget(btn_layout)
-    
-    def load_destinations_data(self):
-        """Load destinations from JSON file"""
-        data_file = 'data/destinations.json'
-        
-        # Create default data if file doesn't exist
-        if not os.path.exists(data_file):
-            os.makedirs('data', exist_ok=True)
-            default_data = {
-                'tokyo': {
-                    'name': 'Tokyo',
-                    'country': 'Japan',
-                    'tips': [
-                        'Learn a few basic Japanese phrases - locals really appreciate it!',
-                        'Get a Suica or Pasmo card for easy train travel',
-                        'Visit small ramen shops in residential areas for authentic meals',
-                        'Convenience stores (konbini) are amazing and have great food',
-                        'Take your shoes off when entering homes and some restaurants'
-                    ]
-                },
-                'paris': {
-                    'name': 'Paris',
-                    'country': 'France',
-                    'tips': [
-                        'Say "Bonjour" when entering any shop - it\'s considered polite',
-                        'The best croissants are in small neighborhood bakeries',
-                        'Museum pass can save you time and money',
-                        'Metro is efficient but watch out for pickpockets',
-                        'Restaurants outside tourist areas are cheaper and more authentic'
-                    ]
-                },
-                'barcelona': {
-                    'name': 'Barcelona',
-                    'country': 'Spain',
-                    'tips': [
-                        'Dinner is typically eaten after 9 PM - restaurants open late',
-                        'Book Sagrada Familia tickets online in advance',
-                        'Try tapas at local bars in El Born or Gracia neighborhoods',
-                        'Learn the difference between Catalan and Spanish culture',
-                        'Beach is nice but there are better beaches outside the city'
-                    ]
-                },
-                'nyc': {
-                    'name': 'New York City',
-                    'country': 'USA',
-                    'tips': [
-                        'Walk fast and keep to the right on sidewalks',
-                        'Get a MetroCard for the subway - fastest way around',
-                        'Explore neighborhoods beyond Manhattan for authentic food',
-                        'Free museums on certain days - check websites',
-                        'Don\'t eat in Times Square - overpriced tourist traps'
-                    ]
-                },
-                'bali': {
-                    'name': 'Bali',
-                    'country': 'Indonesia',
-                    'tips': [
-                        'Dress modestly when visiting temples',
-                        'Negotiate prices at markets (except grocery stores)',
-                        'Rent a scooter to get around like locals',
-                        'Avoid Kuta if you want authentic Balinese experience',
-                        'Try local warungs (small restaurants) for cheap amazing food'
-                    ]
-                }
-            }
-            
-            with open(data_file, 'w') as f:
-                json.dump(default_data, f, indent=2)
-            
-            return default_data
-        else:
-            with open(data_file, 'r') as f:
-                return json.load(f)
-    
-    def show_destination_details(self, dest_id):
-        """Navigate to details screen for selected destination"""
-        details_screen = self.manager.get_screen('details')
-        details_screen.load_destination(dest_id)
-        self.manager.current = 'details'
+        """Load country list when screen is entered"""
+        countries = sorted(COUNTRY_CITIES.keys())
+        self.ids.country_spinner.values = countries
+
+    def on_country_selected(self):
+        """When country is selected, populate city dropdown"""
+        country = self.ids.country_spinner.text
+        if country and country in COUNTRY_CITIES:
+            cities = sorted(COUNTRY_CITIES[country])
+            self.ids.city_spinner.values = cities
+            self.ids.city_spinner.disabled = False
+            self.ids.city_spinner.text = "Select City"
+
+    def go_to_page2(self):
+        """Navigate to second signup page"""
+        country = self.ids.country_spinner.text
+        city = self.ids.city_spinner.text
+
+        if country == "Select Country" or not country:
+            self.show_error("Please select a country")
+            return
+
+        if city == "Select City" or not city:
+            self.show_error("Please select a city")
+            return
+
+        # Store selections temporarily
+        app = App.get_running_app()
+        app.temp_country = country
+        app.temp_city = city
+
+        # Navigate to page 2
+        self.manager.current = 'signup_page2'
+
+    def show_error(self, message):
+        """Show error popup"""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(text=message))
+
+        close_btn = Button(text='OK', size_hint_y=None, height=40)
+        content.add_widget(close_btn)
+
+        popup = Popup(
+            title='Error',
+            content=content,
+            size_hint=(0.8, 0.3)
+        )
+
+        close_btn.bind(on_press=popup.dismiss)
+        popup.open()
 
 
-class DetailsScreen(Screen):
-    """Screen showing tips for a specific destination"""
-    
+class SignupPage2(Screen):
+    """Second signup page: What would you like tourists to do less?"""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = 'details'
-        
-        # Main layout
-        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
-        self.add_widget(self.layout)
-    
-    def load_destination(self, dest_id):
-        """Load and display destination details"""
-        self.layout.clear_widgets()
-        self.dest_id = dest_id
-        
-        # Load destination data from local JSON
-        with open('data/destinations.json', 'r') as f:
-            destinations = json.load(f)
-        
-        dest_data = destinations.get(dest_id, {})
-        dest_name = dest_data.get('name', 'Unknown')
-        dest_country = dest_data.get('country', '')
-        
-        # Header
-        header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.1, spacing=10)
-        
-        back_btn = Button(
-            text='← Back',
-            size_hint_x=0.2,
-            background_color=(0.5, 0.5, 0.5, 1)
-        )
-        back_btn.bind(on_press=lambda x: setattr(self.manager, 'current', 'destinations'))
-        header_layout.add_widget(back_btn)
-        
-        title = Label(
-            text=f"{dest_name}, {dest_country}",
-            font_size='24sp',
-            bold=True,
-            size_hint_x=0.8
-        )
-        header_layout.add_widget(title)
-        
-        self.layout.add_widget(header_layout)
-        
-        # Tips section
-        tips_label = Label(
-            text='Local Tips & Insights',
-            font_size='20sp',
-            bold=True,
-            size_hint_y=0.08
-        )
-        self.layout.add_widget(tips_label)
-        
-        # Scrollable tips
-        scroll = ScrollView(size_hint=(1, 0.7))
-        tips_layout = GridLayout(
-            cols=1,
-            spacing=15,
+        self.extra_textbox_count = 0
+
+    def add_more_textbox(self):
+        """Add an additional textbox for more annoyances"""
+        container = self.ids.additional_annoyances
+        self.extra_textbox_count += 1
+
+        text_input = TextInput(
+            hint_text=f"Annoyance {self.extra_textbox_count + 3} (optional)",
             size_hint_y=None,
-            padding=10
+            height=48,
+            multiline=False
         )
-        tips_layout.bind(minimum_height=tips_layout.setter('height'))
-        
-        # Try to fetch tips from API first
+        container.add_widget(text_input)
+
+    def submit_signup(self):
+        """Submit signup and save user data"""
+        # Get all annoyances
+        annoyances = []
+
+        # Get required first annoyance
+        ann1 = self.ids.annoyance1.text.strip()
+        if not ann1:
+            self.show_error("Please enter at least one thing tourists should do less")
+            return
+
+        annoyances.append(ann1)
+
+        # Get optional annoyances
+        ann2 = self.ids.annoyance2.text.strip()
+        if ann2:
+            annoyances.append(ann2)
+
+        ann3 = self.ids.annoyance3.text.strip()
+        if ann3:
+            annoyances.append(ann3)
+
+        # Get extra annoyances from dynamically added textboxes
+        container = self.ids.additional_annoyances
+        for child in container.children:
+            if isinstance(child, TextInput):
+                text = child.text.strip()
+                if text:
+                    annoyances.append(text)
+
+        # Get location from temp storage
+        app = App.get_running_app()
+        country = getattr(app, 'temp_country', '')
+        city = getattr(app, 'temp_city', '')
+
+        # Save user data
+        user_data = {
+            'country': country,
+            'city': city,
+            'annoyances': annoyances
+        }
+
+        with open('user_data.json', 'w') as f:
+            json.dump(user_data, f, indent=2)
+
+        # Navigate to home screen
+        self.manager.current = 'travel'
+
+    def show_error(self, message):
+        """Show error popup"""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(text=message))
+
+        close_btn = Button(text='OK', size_hint_y=None, height=40)
+        content.add_widget(close_btn)
+
+        popup = Popup(
+            title='Error',
+            content=content,
+            size_hint=(0.8, 0.3)
+        )
+
+        close_btn.bind(on_press=popup.dismiss)
+        popup.open()
+
+
+class TravelScreen(Screen):
+    """Home screen: Where are you going?"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def on_enter(self):
+        """Load country list when screen is entered"""
+        countries = sorted(COUNTRY_CITIES.keys())
+        self.ids.country_spinner.values = countries
+
+    def on_country_selected(self):
+        """When country is selected, populate city dropdown"""
+        country = self.ids.country_spinner.text
+        if country and country in COUNTRY_CITIES:
+            cities = sorted(COUNTRY_CITIES[country])
+            self.ids.city_spinner.values = cities
+            self.ids.city_spinner.disabled = False
+            self.ids.city_spinner.text = "Select City"
+
+    def search_city(self):
+        """Search for a city and display tips"""
+        country = self.ids.country_spinner.text
+        city = self.ids.city_spinner.text
+
+        if city == "Select City" or not city:
+            return
+
+        # Clear previous results
+        results_container = self.ids.results_container
+        results_container.clear_widgets()
+
+        # Show loading message
+        loading_label = Label(
+            text=f'Searching for tips about {city}...',
+            size_hint_y=None,
+            height=40,
+            color=(238/255, 244/255, 237/255, 1)  # Light text
+        )
+        results_container.add_widget(loading_label)
+
+        # Try to get tips from API
         api_client = get_api_client()
-        api_tips = []
-        
+        tips = []
+
         try:
             # Get location from API
-            location = api_client.get_location_by_name(dest_name, dest_country)
+            location = api_client.get_location_by_name(city, country)
             if location:
-                api_tips = api_client.get_location_tips(location['id'])
+                tips_data = api_client.get_location_tips(location['id'])
+
+                # Extract tip texts
+                for tip_data in tips_data:
+                    tip_text = tip_data.get('translated_text') or tip_data.get('tip_text', '')
+                    if tip_text:
+                        tips.append(tip_text)
         except Exception as e:
             print(f"Error fetching tips from API: {e}")
-        
-        # Combine API tips and local tips
-        all_tips = []
-        
-        # Add API tips (processed tips)
-        for tip_data in api_tips:
-            tip_text = tip_data.get('translated_text') or tip_data.get('tip_text', '')
-            if tip_text:
-                all_tips.append(tip_text)
-        
-        # Add local tips if no API tips found
-        if not all_tips:
-            all_tips = dest_data.get('tips', [])
-        
-        # Display tips
-        for tip in all_tips:
-            tip_box = BoxLayout(
-                orientation='horizontal',
+
+        # Clear loading message
+        results_container.clear_widgets()
+
+        if not tips:
+            # Show no results message
+            no_results = Label(
+                text=f'No tips found for {city} yet.',
                 size_hint_y=None,
                 height=80,
-                padding=10
+                color=(238/255, 244/255, 237/255, 1),
+                halign='center'
             )
-            
-            bullet = Label(
-                text='💡',
-                font_size='24sp',
-                size_hint_x=0.1
-            )
-            tip_box.add_widget(bullet)
-            
-            tip_label = Label(
-                text=tip,
-                font_size='16sp',
-                text_size=(Window.width * 0.7, None),
-                halign='left',
-                valign='middle',
-                size_hint_x=0.9
-            )
-            tip_label.bind(size=tip_label.setter('text_size'))
-            tip_box.add_widget(tip_label)
-            
-            tips_layout.add_widget(tip_box)
-        
-        scroll.add_widget(tips_layout)
-        self.layout.add_widget(scroll)
-        
-        # Add tip submission section
-        submit_layout = BoxLayout(orientation='vertical', size_hint_y=0.2, padding=10, spacing=5)
-        
-        submit_label = Label(
-            text='Submit a Tip',
-            font_size='16sp',
-            bold=True,
-            size_hint_y=0.3
-        )
-        submit_layout.add_widget(submit_label)
-        
-        tip_input_layout = BoxLayout(orientation='horizontal', size_hint_y=0.4, spacing=5)
-        self.tip_input = TextInput(
-            multiline=True,
-            hint_text='Enter your tip in any language...',
-            size_hint_x=0.75
-        )
-        tip_input_layout.add_widget(self.tip_input)
-        
-        submit_btn = Button(
-            text='Submit',
-            size_hint_x=0.25,
-            background_color=(0.2, 0.6, 0.8, 1)
-        )
-        submit_btn.bind(on_press=self.submit_tip)
-        tip_input_layout.add_widget(submit_btn)
-        
-        submit_layout.add_widget(tip_input_layout)
-        self.layout.add_widget(submit_layout)
-    
-    def submit_tip(self, instance):
-        """Submit a tip to the backend"""
-        tip_text = self.tip_input.text.strip()
-        if not tip_text:
-            return
-        
-        # Get destination data
-        with open('data/destinations.json', 'r') as f:
-            destinations = json.load(f)
-        
-        dest_data = destinations.get(self.dest_id, {})
-        dest_name = dest_data.get('name', '')
-        dest_country = dest_data.get('country', '')
-        
-        # Submit to API
-        api_client = get_api_client()
-        try:
-            result = api_client.submit_tip(
-                tip_text=tip_text,
-                location_name=dest_name,
-                location_country=dest_country
-            )
-            if result:
-                self.tip_input.text = ''
-                # Show success message (could be improved with a popup)
-                print(f"Tip submitted successfully! ID: {result.get('id')}")
-            else:
-                print("Failed to submit tip. Check API connection.")
-        except Exception as e:
-            print(f"Error submitting tip: {e}")
+            no_results.bind(size=no_results.setter('text_size'))
+            results_container.add_widget(no_results)
+        else:
+            # Display tips
+            for tip in tips:
+                # Create card for each tip
+                tip_card = BoxLayout(
+                    orientation='vertical',
+                    padding=16,
+                    spacing=8,
+                    size_hint_y=None,
+                    height=100
+                )
+
+                # White background with rounded corners
+                from kivy.graphics import Color, RoundedRectangle
+                with tip_card.canvas.before:
+                    Color(1, 1, 1, 1)
+                    tip_card.bg_rect = RoundedRectangle(
+                        pos=tip_card.pos,
+                        size=tip_card.size,
+                        radius=[12]
+                    )
+
+                def update_rect(instance, value):
+                    instance.bg_rect.pos = instance.pos
+                    instance.bg_rect.size = instance.size
+
+                tip_card.bind(pos=update_rect, size=update_rect)
+
+                tip_label = Label(
+                    text=tip,
+                    color=(11/255, 37/255, 69/255, 1),  # Dark text on white card
+                    halign='left',
+                    valign='top',
+                    text_size=(Window.width - 120, None)
+                )
+                tip_label.bind(size=tip_label.setter('text_size'))
+
+                tip_card.add_widget(tip_label)
+                results_container.add_widget(tip_card)
+
+
+class SettingsScreen(Screen):
+    """Settings screen with dark mode toggle"""
+
+    def toggle_dark_mode(self):
+        """Toggle dark mode (placeholder for now)"""
+        # In a full implementation, this would switch between COLOR_BG_DARK and COLOR_BG_LIGHT
+        # For now, we just print the state
+        is_dark = self.ids.dark_mode_toggle.active
+        print(f"Dark mode: {'ON' if is_dark else 'OFF'}")
+
+        # TODO: Implement actual dark mode switching
+        # This would require dynamically changing all canvas.before colors
+        # Or reloading the .kv file with different color variables
+
+    def edit_profile(self):
+        """Navigate back to signup page 1 to edit profile"""
+        self.manager.current = 'signup_page1'
 
 
 class TravelBuddyApp(App):
     """Main application class"""
-    
+
     def build(self):
-        # Set window size (useful for development)
+        # Load KV file
         Builder.load_file('main.kv')
+
+        # Set window size (useful for development)
         Window.size = (400, 650)
-        
-        # Create screen manager
-        sm = ScreenManager()
-        
+
+        # Create screen manager with smooth transitions
+        sm = ScreenManager(transition=SlideTransition(duration=0.3))
+
         # Add screens
-        sm.add_widget(SignupScreen())
-        sm.add_widget(DestinationsScreen())
-        sm.add_widget(DetailsScreen())
-        
+        sm.add_widget(SignupPage1(name='signup_page1'))
+        sm.add_widget(SignupPage2(name='signup_page2'))
+        sm.add_widget(TravelScreen(name='travel'))
+        sm.add_widget(SettingsScreen(name='settings'))
+
         # Check if user data exists
         if os.path.exists('user_data.json'):
-            sm.current = 'destinations'
+            sm.current = 'travel'
         else:
-            sm.current = 'signup'
-        
+            sm.current = 'signup_page1'
+
         return sm
 
 
