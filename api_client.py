@@ -4,7 +4,8 @@ import requests
 import json
 from typing import Optional, List, Dict
 from requests.exceptions import RequestException, ConnectionError, Timeout
-
+from dotenv import load_dotenv
+load_dotenv()
 
 class TravelBuddyAPI:
     """Client for TravelBuddy backend API"""
