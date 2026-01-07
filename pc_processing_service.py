@@ -244,19 +244,31 @@ def process_batch(request: ProcessBatchRequest):
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="TravelBuddy PC Processing Service")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8001, help="Port to bind to")
-    parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
-    
+    parser.add_argument("--workers", type=int, default=4, help="Number of worker processes (default: 4)")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload (disables workers)")
+
     args = parser.parse_args()
-    
-    logger.info(f"Starting PC Processing Service on {args.host}:{args.port}")
-    uvicorn.run(
-        "pc_processing_service:app",
-        host=args.host,
-        port=args.port,
-        reload=args.reload
-    )
+
+    # Note: --reload and --workers are mutually exclusive
+    # When --reload is enabled, workers are automatically set to 1
+    if args.reload:
+        logger.info(f"Starting PC Processing Service on {args.host}:{args.port} with auto-reload (single worker)")
+        uvicorn.run(
+            "pc_processing_service:app",
+            host=args.host,
+            port=args.port,
+            reload=args.reload
+        )
+    else:
+        logger.info(f"Starting PC Processing Service on {args.host}:{args.port} with {args.workers} workers")
+        uvicorn.run(
+            "pc_processing_service:app",
+            host=args.host,
+            port=args.port,
+            workers=args.workers
+        )
 

@@ -17,6 +17,8 @@ Network path: Pi (ethernet) -> Router -> WiFi -> Node -> PC
 import logging
 import sys
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Tuple
 from sqlalchemy.orm import Session
 from backend.database.connection import SessionLocal
 from backend.database.models import Tip, Embedding
@@ -32,27 +34,102 @@ logging.basicConfig(
 )
 
 
-def process_pending_tips(db: Session, wake_pc: bool = True) -> dict:
+def process_batch_concurrent(
+    tips_batch: List[Tip],
+    processing_client,
+    max_workers: int = 4
+) -> Tuple[List[dict], int, int]:
+    """
+    Process a batch of tips using concurrent requests to PC.
+
+    This function sends multiple batch requests concurrently to maximize
+    PC CPU utilization (Ryzen 7 7700: 8 cores/16 threads).
+
+    Args:
+        tips_batch: List of Tip objects to process
+        processing_client: ProcessingClient instance
+        max_workers: Number of concurrent threads (default: 4)
+
+    Returns:
+        Tuple of (results, translated_count, error_count)
+    """
+    # Split tips into smaller batches for concurrent processing
+    # Each batch gets processed in parallel by different PC worker processes
+    batch_size = 20  # 20 tips per request
+    tip_batches = [tips_batch[i:i + batch_size] for i in range(0, len(tips_batch), batch_size)]
+
+    all_results = []
+    translated_count = 0
+    error_count = 0
+
+    def process_single_batch(batch: List[Tip]) -> Tuple[List[dict], int]:
+        """Process a single batch via PC API"""
+        texts = [tip.tip_text for tip in batch]
+        try:
+            results = processing_client.process_batch(texts)
+            # Count translations (non-English texts that were translated)
+            translations = sum(1 for r in results if r.get("language") != "en")
+            return results, translations
+        except Exception as e:
+            logger.error(f"Batch processing error: {e}")
+            return [], 0
+
+    # Process batches concurrently using ThreadPoolExecutor
+    # This sends multiple HTTP requests in parallel to the PC
+    # PC's FastAPI with multiple workers can handle them concurrently
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all batch processing tasks
+        future_to_batch = {
+            executor.submit(process_single_batch, batch): batch
+            for batch in tip_batches
+        }
+
+        # Collect results as they complete
+        for future in as_completed(future_to_batch):
+            batch = future_to_batch[future]
+            try:
+                results, translations = future.result()
+                all_results.extend(results)
+                translated_count += translations
+                logger.info(f"Completed batch of {len(batch)} tips ({translations} translated)")
+            except Exception as e:
+                logger.error(f"Batch future error: {e}")
+                error_count += len(batch)
+
+    return all_results, translated_count, error_count
+
+
+def process_pending_tips(
+    db: Session,
+    wake_pc: bool = True,
+    batch_size: int = 100,
+    max_workers: int = 4
+) -> dict:
     """
     Process all pending tips: translate and generate embeddings.
-    
-    This function:
+
+    This function uses batch processing with concurrent requests for optimal
+    performance on the PC (Ryzen 7 7700: 8 cores/16 threads).
+
+    Processing strategy:
     1. Fetches tips with status='pending' from Pi's PostgreSQL database
     2. Wakes PC if needed (checks if already awake first)
-    3. For each tip:
-       - Detects language
-       - Translates to English using NLLB (if not already English)
-       - Generates vector embedding using miniLM-v6
-       - Stores results back to Pi's database
-    4. Updates tip status to 'processed'
-    
-    Note: Translation and embedding models run on PC, but results are stored
-    back on Pi's database. The PC is used for computation only.
-    
+    3. Splits tips into batches (default: 20 tips per batch)
+    4. Sends multiple batches concurrently (default: 4 concurrent requests)
+    5. PC processes each batch in parallel using multiple worker processes
+    6. Stores results back to Pi's database
+
+    Performance improvements over sequential processing:
+    - Uses /process-batch endpoint (efficient batch processing on PC)
+    - Concurrent requests maximize PC CPU utilization
+    - Network latency hidden by parallel requests
+
     Args:
         db: Database session (connected to Pi's PostgreSQL)
-        wake_pc: Whether to wake PC if sleeping (if False, assumes PC is already on)
-        
+        wake_pc: Whether to wake PC if sleeping (default: True)
+        batch_size: Max tips to process in one run (default: 100)
+        max_workers: Number of concurrent threads (default: 4)
+
     Returns:
         Dictionary with processing statistics
     """
@@ -62,97 +139,87 @@ def process_pending_tips(db: Session, wake_pc: bool = True) -> dict:
         "embedded": 0,
         "errors": 0
     }
-    
+
     # Fetch pending tips from Pi's PostgreSQL database
-    # These are tips submitted via API and stored with status='pending'
-    pending_tips = db.query(Tip).filter(Tip.status == "pending").all()
-    
+    pending_tips = db.query(Tip).filter(Tip.status == "pending").limit(batch_size).all()
+
     if not pending_tips:
         logger.info("No pending tips to process")
         return stats
-    
-    logger.info(f"Processing {len(pending_tips)} pending tips")
-    
-    # Wake PC if needed (only if PC is sleeping - checks first)
-    # If PC is already on, wake() returns True immediately without sending packet
+
+    logger.info(f"Processing {len(pending_tips)} pending tips with {max_workers} concurrent workers")
+
+    # Wake PC if needed
     if wake_pc:
         wol = get_wol()
         if not wol.wake():
-            logger.error("Failed to wake PC, but continuing with processing")
-            # Continue anyway - PC might already be on or processing can happen later
-    
-    # Initialize processing client (connects to PC's processing API)
-    # The PC must have a processing service running (see processing_service.py)
+            logger.error("Failed to wake PC")
+            return stats
+
+    # Initialize processing client
     processing_client = get_processing_client()
-    
+
     # Check if PC processing service is available
     if not processing_client.health_check():
-        logger.error("PC processing service is not available. Make sure it's running on the PC.")
+        logger.error("PC processing service is not available")
         logger.error(f"Expected service at: {processing_client.api_url}")
         return stats
-    
-    # Process each tip
-    for tip in pending_tips:
+
+    # Process tips in batches with concurrent requests
+    results, translated_count, error_count = process_batch_concurrent(
+        pending_tips,
+        processing_client,
+        max_workers=max_workers
+    )
+
+    stats["translated"] = translated_count
+    stats["errors"] = error_count
+
+    # Store results back to database
+    for i, tip in enumerate(pending_tips):
+        if i >= len(results):
+            # Error occurred for this tip
+            tip.status = "error"
+            continue
+
         try:
-            # Step 1: Detect language and translate if needed
-            # This sends HTTP request to PC's processing API
-            # PC runs NLLB model and returns translated text
-            if not tip.translated_text:
-                detected_lang = processing_client.detect_language(tip.tip_text)
-                tip.original_language = detected_lang
-                
-                # Translate if not English (PC processes this using NLLB)
-                if detected_lang != "en":
-                    tip.translated_text = processing_client.translate(
-                        tip.tip_text,
-                        source_language=detected_lang
-                    )
-                    stats["translated"] += 1
+            result = results[i]
+
+            # Store translated text and language
+            tip.translated_text = result.get("translated_text")
+            tip.original_language = result.get("language")
+
+            # Store embedding
+            embedding_vector = result.get("embedding", [])
+            if embedding_vector:
+                existing_embedding = db.query(Embedding).filter(
+                    Embedding.tip_id == tip.id
+                ).first()
+
+                if existing_embedding:
+                    existing_embedding.embedding = embedding_vector
                 else:
-                    # Already English, use original text
-                    tip.translated_text = tip.tip_text
-            
-            # Step 2: Generate vector embedding (PC processes this using miniLM-v6)
-            # This sends HTTP request to PC's processing API
-            # PC generates embedding and returns vector
-            text_to_embed = tip.translated_text or tip.tip_text
-            embedding_vector = processing_client.embed(text_to_embed)
-            
-            # Step 3: Store embedding back to Pi's PostgreSQL database
-            # Check if embedding already exists (in case of re-processing)
-            existing_embedding = db.query(Embedding).filter(
-                Embedding.tip_id == tip.id
-            ).first()
-            
-            if existing_embedding:
-                # Update existing embedding
-                existing_embedding.embedding = embedding_vector
-            else:
-                # Create new embedding record
-                embedding = Embedding(
-                    tip_id=tip.id,
-                    embedding=embedding_vector  # Stored as REAL[] array in PostgreSQL
-                )
-                db.add(embedding)
-            
-            # Step 4: Update tip status to 'processed' in Pi's database
+                    embedding = Embedding(
+                        tip_id=tip.id,
+                        embedding=embedding_vector
+                    )
+                    db.add(embedding)
+
+                stats["embedded"] += 1
+
+            # Update tip status
             tip.status = "processed"
             tip.processed_at = datetime.utcnow()
-            
             stats["processed"] += 1
-            stats["embedded"] += 1
-            
-            logger.info(f"Processed tip {tip.id}")
-        
+
         except Exception as e:
-            logger.error(f"Error processing tip {tip.id}: {e}")
+            logger.error(f"Error storing results for tip {tip.id}: {e}")
             tip.status = "error"
             stats["errors"] += 1
-    
-    # Commit all changes to Pi's PostgreSQL database
-    # This saves: translated_text, original_language, embedding, status, processed_at
+
+    # Commit all changes
     db.commit()
-    
+
     logger.info(f"Processing complete: {stats}")
     return stats
 
@@ -183,7 +250,7 @@ def run_promotion(db: Session) -> int:
     return len(promoted)
 
 
-def nightly_job(wake_pc: bool = True, run_promotion: bool = True, sleep_pc: bool = False):
+def nightly_job(wake_pc: bool = True, promote: bool = True, sleep_pc: bool = False):
     """
     Main nightly processing job entry point.
     
@@ -202,7 +269,7 @@ def nightly_job(wake_pc: bool = True, run_promotion: bool = True, sleep_pc: bool
     
     Args:
         wake_pc: Whether to wake PC if sleeping (if False, assumes PC is already on)
-        run_promotion: Whether to run tip promotion after processing
+        promote: Whether to run tip promotion after processing
         sleep_pc: Whether to put PC to sleep after processing (optional)
     """
     logger.info("Starting nightly processing job")
@@ -216,7 +283,7 @@ def nightly_job(wake_pc: bool = True, run_promotion: bool = True, sleep_pc: bool
         
         # Run promotion if requested
         # This runs entirely on Pi using embeddings already in database
-        if run_promotion:
+        if promote:
             promoted_count = run_promotion(db)
             stats["promoted"] = promoted_count
         
@@ -240,8 +307,8 @@ def nightly_job(wake_pc: bool = True, run_promotion: bool = True, sleep_pc: bool
 if __name__ == "__main__":
     # Run as standalone script
     wake_pc = "--no-wake" not in sys.argv
-    run_promotion = "--no-promotion" not in sys.argv
+    promote = "--no-promotion" not in sys.argv
     sleep_pc = "--sleep-pc" in sys.argv
     
-    nightly_job(wake_pc=wake_pc, run_promotion=run_promotion, sleep_pc=sleep_pc)
+    nightly_job(wake_pc=wake_pc, promote=promote, sleep_pc=sleep_pc)
 
