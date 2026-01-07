@@ -104,6 +104,53 @@ class TravelBuddyAPI:
                 return loc
         return None
 
+    def search_location(self, name: str, country: str) -> Optional[Dict]:
+        """
+        Search for a location by name and country using the search endpoint.
+        Returns location data or None if not found.
+        """
+        params = {
+            "name": name,
+            "country": country
+        }
+        result = self._make_request("GET", "/api/locations/search", params=params)
+        return result
+
+    def get_promoted_tips(
+        self,
+        location_name: str,
+        location_country: str,
+        limit: int = 20
+    ) -> List[Dict]:
+        """
+        Get promoted tips for a location by name and country.
+        Returns list of promoted tips ranked by mention count.
+        """
+        params = {
+            "location_name": location_name,
+            "location_country": location_country,
+            "limit": limit
+        }
+        result = self._make_request("GET", "/api/promoted-tips", params=params)
+        return result if result else []
+
+    def get_location_promoted_tips(
+        self,
+        location_id: int,
+        limit: int = 20
+    ) -> List[Dict]:
+        """
+        Get promoted tips for a location by location ID.
+        Returns list of promoted tips ranked by mention count.
+        """
+        params = {"limit": limit}
+        result = self._make_request(
+            "GET",
+            f"/api/locations/{location_id}/promoted-tips",
+            params=params
+        )
+        return result if result else []
+
 
 # Global API client instance
 _api_client = None

@@ -45,6 +45,9 @@ bin/
 # User data
 user_data.json
 
+.env.*
+!.env.example
+
 
 
 
