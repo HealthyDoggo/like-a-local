@@ -6,6 +6,7 @@ import subprocess
 from typing import Optional
 from wakeonlan import send_magic_packet
 from backend.config import settings
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -36,31 +37,29 @@ class WakeOnLAN:
         self.ip_address = ip_address
         self.port = port
     
-    def is_pc_awake(self, timeout: int = 2) -> bool:
+    def is_pc_awake(self, timeout: int = 5) -> bool:
         """
-        Check if PC is already awake by attempting to connect.
-        
+        Check if PC is already awake by attempting to reach the processing API.
+
         This prevents sending unnecessary wake packets if PC is already on.
-        Tests connectivity to PC's SSH port (22) as an indicator.
-        
+        Tests connectivity to PC's processing API /health endpoint.
+
         Args:
             timeout: Connection timeout in seconds
-            
+
         Returns:
             True if PC is reachable, False otherwise
         """
         if not self.ip_address:
             return False
-        
+
         try:
-            # Try to connect to SSH port (22) to check if PC is awake
-            # This is a lightweight check - doesn't require authentication
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(timeout)
-            result = sock.connect_ex((self.ip_address, 22))  # Try SSH port
-            sock.close()
-            return result == 0  # 0 means connection successful
-        except Exception as e:
+            # Check if PC's processing API is available via /health endpoint
+            # This is more reliable than SSH check since the API is what we actually need
+            api_url = f"http://{self.ip_address}:{settings.pc_processing_api_port}/health"
+            response = requests.get(api_url, timeout=timeout)
+            return response.status_code == 200
+        except requests.exceptions.RequestException as e:
             logger.debug(f"PC wake check error: {e}")
             return False
     
