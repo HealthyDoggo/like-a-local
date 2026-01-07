@@ -1,76 +1,136 @@
 #:kivy 2.3.0
 
-# --------------------------------------------------
-# Color Palette - Based on USER_FLOW.md (Dark blue theme)
-# Easy to change: just update these hex values!
-# --------------------------------------------------
-#:set COLOR_PRIMARY   (60/255, 127/255, 204/255, 1)   # 3C7FCC - Bright blue
-#:set COLOR_SECONDARY (33/255, 75/255, 135/255, 1)    # 214B87 - Medium blue
-#:set COLOR_DARK      (11/255, 37/255, 69/255, 1)     # 0B2545 - Dark blue
-#:set COLOR_LIGHT     (141/255, 169/255, 196/255, 1)  # 8DA9C4 - Light blue
-#:set COLOR_BG_DARK   (11/255, 37/255, 69/255, 1)     # 0B2545 - Dark blue background
-#:set COLOR_BG_LIGHT  (238/255, 244/255, 237/255, 1)  # EEF4ED - Off-white background
-#:set COLOR_TEXT_DARK (11/255, 37/255, 69/255, 1)     # 0B2545
-#:set COLOR_TEXT_LIGHT (238/255, 244/255, 237/255, 1) # EEF4ED
+# ==================================================
+# COLOR PALETTE
+# ==================================================
+#:set COLOR_PRIMARY    (60/255, 127/255, 204/255, 1)
+#:set COLOR_SECONDARY  (33/255, 75/255, 135/255, 1)
+#:set COLOR_DARK       (33/255, 75/255, 135/255, 1)
+#:set COLOR_LIGHT      (141/255, 169/255, 196/255, 1)
+#:set COLOR_BG_DARK    (11/255, 37/255, 69/255, 1)
+#:set COLOR_TEXT_LIGHT (238/255, 244/255, 237/255, 1)
+#:set COLOR_TEXT_DARK  (11/255, 37/255, 69/255, 1)
 
-# --------------------------------------------------
-# Fonts
-# --------------------------------------------------
+# ==================================================
+# FONTS
+# ==================================================
 #:set FONT_HEADING_SERIF "Georgia"
 #:set FONT_HEADING "Roboto-Bold"
 #:set FONT_BODY "Roboto-Regular"
 
-# --------------------------------------------------
-# Global Widget Styling
-# --------------------------------------------------
-
+# ==================================================
+# GLOBAL STYLES
+# ==================================================
 <Button>:
     background_normal: ""
     background_color: COLOR_PRIMARY
     color: COLOR_TEXT_LIGHT
-    bold: False
     font_name: FONT_BODY
     font_size: "16sp"
 
 <Label>:
     font_name: FONT_BODY
     font_size: "16sp"
-    color: COLOR_TEXT_LIGHT  # Default to light text for dark backgrounds
+    color: COLOR_TEXT_LIGHT
 
 <TextInput>:
     font_name: FONT_BODY
     font_size: "16sp"
-    background_color: (1, 1, 1, 1)
-    foreground_color: COLOR_TEXT_DARK
+    background_color: 0, 0, 0, 0
+    foreground_color: COLOR_TEXT_LIGHT
     cursor_color: COLOR_PRIMARY
-    padding: [12, 12]
     multiline: False
+    padding: [12, 12]
     background_normal: ""
     background_active: ""
     canvas.before:
         Color:
-            rgba: (1, 1, 1, 1)
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [8]
-        Color:
-            rgba: COLOR_PRIMARY if self.focus else (0.8, 0.8, 0.8, 1)
+            rgba: COLOR_PRIMARY if self.focus else COLOR_LIGHT
         Line:
-            rounded_rectangle: (self.x, self.y, self.width, self.height, 8)
+            rounded_rectangle: self.x, self.y, self.width, self.height, 8
             width: 2 if self.focus else 1
 
-# --------------------------------------------------
-# Custom Components
-# --------------------------------------------------
+# ==================================================
+# REUSABLE COMPONENTS
+# ==================================================
+<LocationSelector>:
+    orientation: "vertical"
+    spacing: "12dp"
+    size_hint_y: None
+    height: self.minimum_height
 
-# Modern rounded button
+    FloatLayout:
+        size_hint_y: None
+        height: "48dp"
+
+        TextInput:
+            id: country_input
+            hint_text: "Country"
+            size_hint_y: None
+            height: "48dp"
+            pos_hint: {"x": 0, "top": 1}
+            on_text: root.on_country_text_changed(self.text)
+
+        SuggestionPanel:
+            id: country_panel
+            size_hint: 1, None
+            height: 0
+            pos_hint: {"x": 0, "top": 0}
+            RecycleView:
+                id: country_rv
+                viewclass: "SuggestionItem"
+                scroll_type: ["bars", "content"]
+                bar_width: "8dp"
+                smooth_scroll_end: 10
+                effect_cls: "ScrollEffect"
+                size_hint_y: None
+                height: 0 if not self.data else self.parent.height
+                RecycleBoxLayout:
+                    default_size: None, dp(44)
+                    default_size_hint: 1, None
+                    size_hint_y: None
+                    height: self.minimum_height
+                    orientation: "vertical"
+                    spacing: 0
+
+    FloatLayout:
+        size_hint_y: None
+        height: "48dp"
+
+        TextInput:
+            id: city_input
+            hint_text: "City"
+            size_hint_y: None
+            height: "48dp"
+            pos_hint: {"x": 0, "top": 1}
+            disabled: True
+            on_text: root.on_city_text_changed(self.text)
+
+        SuggestionPanel:
+            id: city_panel
+            size_hint: 1, None
+            height: 0
+            pos_hint: {"x": 0, "top": 0}
+            RecycleView:
+                id: city_rv
+                viewclass: "SuggestionItem"
+                scroll_type: ["bars", "content"]
+                bar_width: "8dp"
+                smooth_scroll_end: 10
+                effect_cls: "ScrollEffect"
+                size_hint_y: None
+                height: 0 if not self.data else self.parent.height
+                RecycleBoxLayout:
+                    default_size: None, dp(44)
+                    default_size_hint: 1, None
+                    size_hint_y: None
+                    height: self.minimum_height
+                    orientation: "vertical"
+                    spacing: 0
+
 <RoundedButton@Button>:
     size_hint_y: None
     height: "48dp"
-    background_normal: ""
-    background_color: COLOR_PRIMARY
-    color: COLOR_TEXT_LIGHT
     canvas.before:
         Color:
             rgba: self.background_color
@@ -79,6 +139,17 @@
             size: self.size
             radius: [24]
 
+<SuggestionPanel@BoxLayout>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: 0
+    canvas.before:
+        Color:
+            rgba: COLOR_DARK
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [0, 0, 12, 12]  # Only round bottom corners
 # Chip/Tag button for answer display
 <AnswerChip@Button>:
     size_hint: None, None
@@ -86,7 +157,8 @@
     background_normal: ""
     background_color: COLOR_LIGHT
     color: COLOR_TEXT_DARK
-    padding: [16, 0]
+    padding_x: "16dp"
+    padding_y: 0
     canvas.before:
         Color:
             rgba: self.background_color
@@ -94,6 +166,22 @@
             pos: self.pos
             size: self.size
             radius: [18]
+
+<SuggestionItem@Button>:
+    size_hint_y: None
+    height: "44dp"
+    background_color: COLOR_DARK
+    halign: "left"
+    valign: "middle"
+    text_size: self.width - dp(32), None
+    padding_x: "16dp"
+    padding_y: 0
+    canvas.before:
+        Color:
+            rgba: COLOR_SECONDARY if self.state == "down" else self.background_color
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
 # Bottom nav button
 <NavButton@Button>:
@@ -136,10 +224,9 @@
             size: self.size
             radius: [16]
 
-
-# --------------------------------------------------
-# Signup Screen - Page 1: "Where are you from?"
-# --------------------------------------------------
+# ==================================================
+# SIGNUP PAGE 1 — LOCATION
+# ==================================================
 <SignupPage1>:
     name: "signup_page1"
     canvas.before:
@@ -152,58 +239,68 @@
     BoxLayout:
         orientation: "vertical"
         padding: "40dp"
-        spacing: "40dp"
+        spacing: "30dp"
 
-        # Large serif question at top, centered
         Label:
             text: "Where are you from?"
             font_name: FONT_HEADING_SERIF
             font_size: "32sp"
-            color: COLOR_TEXT_LIGHT
             bold: True
-            size_hint_y: 0.3
             halign: "center"
             valign: "middle"
             text_size: self.size
 
-        # Country and City dropdowns
-        BoxLayout:
-            orientation: "vertical"
-            spacing: "20dp"
-            size_hint_y: 0.5
+        LocationSelector:
+            id: location_selector
 
-            # Country spinner
-            Spinner:
-                id: country_spinner
-                text: "Select Country"
-                values: []
+        Widget:
+
+        RoundedButton:
+            text: "Next"
+            on_press: root.go_to_page2()
+
+# ==================================================
+# TRAVEL SEARCH SCREEN
+# ==================================================
+<TravelScreen>:
+    name: "travel"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG_DARK
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "40dp"
+        spacing: "24dp"
+
+        Label:
+            text: "Where are you going?"
+            font_name: FONT_HEADING_SERIF
+            font_size: "32sp"
+            bold: True
+            halign: "center"
+            text_size: self.size
+            size_hint_y: None
+            height: "100dp"
+
+        LocationSelector:
+            id: location_selector
+
+        RoundedButton:
+            text: "Search"
+            on_press: root.search_city()
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                id: results_container
+                orientation: "vertical"
                 size_hint_y: None
-                height: "48dp"
-                background_normal: ""
-                background_color: (1, 1, 1, 1)
-                color: COLOR_TEXT_DARK
-                on_text: root.on_country_selected()
-
-            # City spinner
-            Spinner:
-                id: city_spinner
-                text: "Select City"
-                values: []
-                size_hint_y: None
-                height: "48dp"
-                background_normal: ""
-                background_color: (1, 1, 1, 1)
-                color: COLOR_TEXT_DARK
-                disabled: True
-
-        # Next button
-        BoxLayout:
-            size_hint_y: 0.2
-
-            RoundedButton:
-                text: "Next"
-                on_press: root.go_to_page2()
-
+                height: self.minimum_height
+                spacing: "12dp"
 
 # --------------------------------------------------
 # Signup Screen - Page 2: "What would you like tourists to do less?"
@@ -289,86 +386,6 @@
             RoundedButton:
                 text: "Submit"
                 on_press: root.submit_signup()
-
-
-# --------------------------------------------------
-# Home/Travel Screen - "Where are you going?"
-# --------------------------------------------------
-<TravelScreen>:
-    name: "travel"
-    canvas.before:
-        Color:
-            rgba: COLOR_BG_DARK
-        Rectangle:
-            pos: self.pos
-            size: self.size
-
-    BoxLayout:
-        orientation: "vertical"
-        padding: "40dp"
-        spacing: "30dp"
-
-        # Large serif question at top, centered
-        Label:
-            text: "Where are you going?"
-            font_name: FONT_HEADING_SERIF
-            font_size: "32sp"
-            color: COLOR_TEXT_LIGHT
-            bold: True
-            size_hint_y: 0.2
-            halign: "center"
-            valign: "middle"
-            text_size: self.size
-
-        # Country and City search
-        BoxLayout:
-            orientation: "vertical"
-            spacing: "20dp"
-            size_hint_y: 0.3
-
-            # Country spinner
-            Spinner:
-                id: country_spinner
-                text: "Select Country"
-                values: []
-                size_hint_y: None
-                height: "48dp"
-                background_normal: ""
-                background_color: (1, 1, 1, 1)
-                color: COLOR_TEXT_DARK
-                on_text: root.on_country_selected()
-
-            # City spinner
-            Spinner:
-                id: city_spinner
-                text: "Select City"
-                values: []
-                size_hint_y: None
-                height: "48dp"
-                background_normal: ""
-                background_color: (1, 1, 1, 1)
-                color: COLOR_TEXT_DARK
-                disabled: True
-
-            RoundedButton:
-                text: "Search"
-                on_press: root.search_city()
-
-        # Results area
-        ScrollView:
-            id: results_scroll
-            do_scroll_x: False
-
-            BoxLayout:
-                id: results_container
-                orientation: "vertical"
-                spacing: "12dp"
-                padding: "0dp"
-                size_hint_y: None
-                height: self.minimum_height
-
-        # Bottom nav
-        BottomNav:
 
 
 # --------------------------------------------------
