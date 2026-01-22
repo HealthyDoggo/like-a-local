@@ -321,14 +321,14 @@
 
         # Large serif question at top, centered
         Label:
-            text: "What would you like tourists to do less?"
+            text: "What would you like tourists to do [b]less[/b]?"
             font_name: FONT_HEADING_SERIF
             font_size: "28sp"
             color: COLOR_TEXT_LIGHT
-            bold: True
             size_hint_y: 0.25
             halign: "center"
             valign: "middle"
+            markup: True
             text_size: self.size
 
         # Three textboxes minimum (only one required)
@@ -341,7 +341,7 @@
                 spacing: "16dp"
                 size_hint_y: None
                 height: self.minimum_height
-                padding: [0, 10]
+                padding: [0, "20dp", 0, "10dp"]  # left, top, right, bottom
 
                 TextInput:
                     id: annoyance1
@@ -495,3 +495,45 @@
 
         # Bottom nav
         BottomNav:
+
+# --------------------------------------------------
+# TRAVEL TIPS PAGE
+# --------------------------------------------------
+<TravelTipsPage>:
+    name: "travel_tips"
+    canvas.before:
+        Color:
+            rgba: COLOR_BG_DARK
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: "20dp"
+        spacing: "24dp"
+
+        Label:
+            text: "Actions to avoid"
+            font_name: FONT_HEADING_SERIF
+            font_size: "32sp"
+            bold: True
+            halign: "center"
+            text_size: self.size
+            size_hint_y: None
+            height: "100dp"
+
+        ScrollView:
+            do_scroll_x: False
+            size_hint_y: 1
+            BoxLayout:
+                id: results_container
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 0  # No spacing between rows - lines provide separation
+                padding: [0, "20dp", 0, "10dp"]  # left, top, right, bottom
+
+        # Bottom nav
+        BottomNav:
+        

@@ -21,6 +21,7 @@ import uvicorn
 # Make sure the backend directory is in Python path or install as package
 import sys
 import os
+import subprocess
 
 # Add backend directory to path if not already there
 backend_path = os.path.join(os.path.dirname(__file__), 'backend')
@@ -241,6 +242,18 @@ def process_batch(request: ProcessBatchRequest):
         logger.error(f"Batch processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/shutdown")
+def shutdown():
+    """
+    Shutdown the PC.
+    """
+    try:
+        subprocess.run(["shutdown", "/s", "/t", "0"], check=True)
+        return {"status": "shutdown initiated"}
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 
 if __name__ == "__main__":
     import argparse
