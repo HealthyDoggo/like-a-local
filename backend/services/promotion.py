@@ -5,11 +5,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from backend.database.models import Tip, TipPromotion, Location, Embedding
 from backend.services.embedding import get_embedding_service
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
-
-SIMILARITY_THRESHOLD = 0.85  # Threshold for considering tips similar
-MIN_MENTIONS = 3  # Minimum mentions to promote a tip
 
 
 class PromotionService:
@@ -23,9 +21,13 @@ class PromotionService:
         tip_text: str,
         location_id: int,
         db: Session,
-        threshold: float = SIMILARITY_THRESHOLD
+        threshold: float = None
     ) -> List[Tip]:
         """Find tips similar to the given tip text at the same location"""
+        # Use config threshold if not provided
+        if threshold is None:
+            threshold = settings.similarity_threshold
+
         # Get embedding for the tip text
         try:
             embedding = self.embedding_service.embed(tip_text)
@@ -103,8 +105,8 @@ class PromotionService:
             # Promote groups with enough mentions
             for canonical_text, group_tips in tip_groups.items():
                 mention_count = len(group_tips)
-                
-                if mention_count >= MIN_MENTIONS:
+
+                if mention_count >= settings.min_mentions:
                     # Check if already promoted
                     existing = db.query(TipPromotion).filter(
                         TipPromotion.tip_text == canonical_text,

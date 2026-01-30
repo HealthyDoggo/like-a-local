@@ -39,7 +39,11 @@ class Settings(BaseSettings):
     
     # Translation configuration
     target_language: str = os.getenv("TARGET_LANGUAGE", "eng_Latn")  # English
-    
+
+    # Promotion/clustering configuration
+    similarity_threshold: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.85"))  # Cosine similarity threshold for clustering
+    min_mentions: int = int(os.getenv("MIN_MENTIONS", "3"))  # Minimum mentions to promote a tip
+
     class Config:
         env_file = ".env"
         case_sensitive = False
