@@ -1,0 +1,173 @@
+import { motion } from 'motion/react';
+import { useNavigate } from 'react-router';
+import { Settings, User, Heart, MessageSquare, ChevronRight, Globe } from 'lucide-react';
+import { BottomNav } from '@/app/components/BottomNav';
+import { useSettings } from '@/hooks/useSettings';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+export function ProfileScreen() {
+  const navigate = useNavigate();
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const { reducedMotion } = useSettings();
+  const { language, availableLanguages } = useLanguage();
+  const currentLanguage = availableLanguages.find(l => l.code === language);
+
+  const MenuItem = ({ 
+    icon: Icon, 
+    title, 
+    subtitle, 
+    onClick 
+  }: { 
+    icon: any; 
+    title: string; 
+    subtitle?: string; 
+    onClick: () => void;
+  }) => (
+    <motion.button
+      onClick={onClick}
+      className="flex items-center justify-between w-full py-4 border-b"
+      style={{ borderColor: 'var(--app-border)' }}
+      whileTap={reducedMotion ? {} : { scale: 0.99 }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ backgroundColor: 'var(--app-surface-accent)' }}
+        >
+          <Icon className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
+        </div>
+        <div className="text-left">
+          <p
+            className="text-[15px] leading-[20px]"
+            style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}
+          >
+            {title}
+          </p>
+          {subtitle && (
+            <p className="text-[13px] leading-[18px]" style={{ color: 'var(--app-text-secondary)' }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      <ChevronRight className="w-5 h-5" style={{ color: 'var(--app-text-secondary)' }} />
+    </motion.button>
+  );
+
+  return (
+    <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+      <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
+        <motion.h1
+          initial={reducedMotion ? false : { opacity: 0, y: -10 }}
+          animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+          className="text-[24px] leading-[28px] mb-8"
+          style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+        >
+          Profile
+        </motion.h1>
+
+        {!isLoggedIn ? (
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={reducedMotion ? false : { opacity: 1 }}
+            transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
+            className="mb-8"
+          >
+            <div className="rounded-xl shadow-sm p-6 text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: 'var(--app-surface-accent)' }}
+              >
+                <User className="w-8 h-8" style={{ color: 'var(--app-text-accent)' }} />
+              </div>
+              <h2
+                className="text-[18px] leading-[24px] mb-2"
+                style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+              >
+                Sign in to save your progress
+              </h2>
+              <p className="text-[14px] leading-[20px] mb-4" style={{ color: 'var(--app-text-secondary)' }}>
+                Keep your saved tips and contributions across devices
+              </p>
+              <motion.button
+                onClick={() => navigate('/sign-in')}
+                className="w-full px-6 py-3 rounded-xl text-[15px] font-medium"
+                style={{ backgroundColor: 'var(--app-text-accent)', color: 'var(--app-surface)' }}
+                whileTap={reducedMotion ? {} : { scale: 0.98 }}
+              >
+                Sign in
+              </motion.button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={reducedMotion ? false : { opacity: 1 }}
+            transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
+            className="mb-8"
+          >
+            <div className="rounded-xl shadow-sm p-6" style={{ backgroundColor: 'var(--app-surface)' }}>
+              <div className="flex items-center gap-4 mb-6">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: 'var(--app-surface-accent)' }}
+                >
+                  <User className="w-8 h-8" style={{ color: 'var(--app-text-accent)' }} />
+                </div>
+                <div>
+                  <h2
+                    className="text-[18px] leading-[24px] mb-1"
+                    style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+                  >
+                    Traveler
+                  </h2>
+                  <p className="text-[14px]" style={{ color: 'var(--app-text-secondary)' }}>
+                    Member since 2025
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--app-surface-secondary)' }}>
+                  <Heart className="w-5 h-5 mx-auto mb-1" style={{ color: 'var(--app-text-accent)' }} />
+                  <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
+                    {JSON.parse(localStorage.getItem('savedTips') || '[]').length}
+                  </p>
+                  <p className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>Saved tips</p>
+                </div>
+                <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--app-surface-secondary)' }}>
+                  <MessageSquare className="w-5 h-5 mx-auto mb-1" style={{ color: 'var(--app-text-accent)' }} />
+                  <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>3</p>
+                  <p className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>Contributions</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={reducedMotion ? false : { opacity: 1 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.2 }}
+          className="rounded-xl shadow-sm p-5"
+          style={{ backgroundColor: 'var(--app-surface)' }}
+        >
+          <MenuItem
+            icon={Globe}
+            title="Language"
+            subtitle={currentLanguage?.native_name || "English"}
+            onClick={() => navigate('/settings/language')}
+          />
+          <MenuItem
+            icon={Settings}
+            title="Settings"
+            subtitle="Accessibility, appearance, and more"
+            onClick={() => navigate('/settings')}
+          />
+        </motion.div>
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+}
