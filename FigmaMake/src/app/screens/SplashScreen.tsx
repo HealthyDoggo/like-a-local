@@ -42,7 +42,7 @@ export function SplashScreen() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-white overflow-hidden max-w-[360px] mx-auto">
+    <div className="relative min-h-screen overflow-hidden max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
       {/* Animated Icon Background */}
       {!reducedMotion && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -115,29 +115,29 @@ export function SplashScreen() {
           transition={{ delay: 0.3, duration: 0.8 }}
           className="text-center"
         >
-          <motion.h1 
+          <motion.h1
             className="text-[36px] leading-[40px] mb-4"
-            style={{ color: '#1D3557', fontWeight: 700 }}
+            style={{ color: 'var(--app-text-primary)', fontWeight: 700 }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
           >
             Like a Local
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             className="text-[18px] leading-[26px] mb-2"
-            style={{ color: '#1D3557', fontWeight: 500 }}
+            style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.6 }}
           >
             Understand everyday customs before you arrive
           </motion.p>
-          
-          <motion.p 
+
+          <motion.p
             className="text-[15px] leading-[22px]"
-            style={{ color: '#6B7280' }}
+            style={{ color: 'var(--app-text-secondary)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9, duration: 0.6 }}
@@ -153,8 +153,8 @@ export function SplashScreen() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1, duration: 0.6 }}
           >
-            <Button 
-              onClick={() => navigate('/intent')} 
+            <Button
+              onClick={() => navigate('/sign-up')}
               className="w-full shadow-lg"
             >
               Get started
@@ -164,7 +164,7 @@ export function SplashScreen() {
           <motion.button
             onClick={() => navigate('/sign-in')}
             className="text-[15px]"
-            style={{ color: '#457B9D' }}
+            style={{ color: 'var(--app-text-accent)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.3, duration: 0.6 }}

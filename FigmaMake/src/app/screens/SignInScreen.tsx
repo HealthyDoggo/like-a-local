@@ -13,7 +13,7 @@ export function SignInScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-white max-w-[360px] mx-auto">
+    <div className="min-h-screen max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-8 py-8">
         {/* Header with back button */}
         <motion.div
@@ -24,7 +24,7 @@ export function SignInScreen() {
           <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2"
-            style={{ color: '#457B9D' }}
+            style={{ color: 'var(--app-text-accent)' }}
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -39,11 +39,11 @@ export function SignInScreen() {
         >
           <h1
             className="text-[32px] leading-[38px] mb-3"
-            style={{ color: '#1D3557', fontWeight: 700 }}
+            style={{ color: 'var(--app-text-primary)', fontWeight: 700 }}
           >
             Welcome back
           </h1>
-          <p className="text-[16px] leading-[24px]" style={{ color: '#6B7280' }}>
+          <p className="text-[16px] leading-[24px]" style={{ color: 'var(--app-text-secondary)' }}>
             Sign in to save tips and share local knowledge
           </p>
         </motion.div>
@@ -78,7 +78,7 @@ export function SignInScreen() {
           <motion.button
             onClick={() => handleSignIn('google')}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2"
-            style={{ borderColor: '#E5E7EB', color: '#1D3557' }}
+            style={{ borderColor: 'var(--app-border)', color: 'var(--app-text-primary)' }}
             whileTap={{ scale: 0.98 }}
           >
             <div className="w-5 h-5 flex items-center justify-center">
@@ -100,12 +100,12 @@ export function SignInScreen() {
           transition={{ delay: 0.4 }}
           className="mt-8"
         >
-          <p className="text-[13px] text-center leading-[20px]" style={{ color: '#6B7280' }}>
+          <p className="text-[13px] text-center leading-[20px]" style={{ color: 'var(--app-text-secondary)' }}>
             Don't have an account?{' '}
             <button
               onClick={() => navigate('/sign-up')}
               className="font-medium"
-              style={{ color: '#457B9D' }}
+              style={{ color: 'var(--app-text-accent)' }}
             >
               Sign up
             </button>
@@ -118,7 +118,7 @@ export function SignInScreen() {
           transition={{ delay: 0.5 }}
           className="mt-6"
         >
-          <p className="text-[12px] text-center leading-[18px]" style={{ color: '#9CA3AF' }}>
+          <p className="text-[12px] text-center leading-[18px]" style={{ color: 'var(--app-text-secondary)', opacity: 0.7 }}>
             By continuing, you agree to our terms and privacy policy
           </p>
         </motion.div>
