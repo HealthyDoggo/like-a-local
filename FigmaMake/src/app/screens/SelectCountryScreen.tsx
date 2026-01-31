@@ -3,12 +3,12 @@ import { motion } from 'motion/react';
 import { Input } from '@/app/components/Input';
 import { ListItem } from '@/app/components/ListItem';
 import { useNavigate } from 'react-router';
-import { useLocations } from '@/hooks/useLocations';
+import { useCountriesAndCities } from '@/hooks/useCountriesAndCities';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
 
-// Flag emoji mapping for common countries
+// Flag emoji mapping for countries
 const countryFlags: Record<string, string> = {
   'United States': '🇺🇸',
   'United Kingdom': '🇬🇧',
@@ -30,6 +30,27 @@ const countryFlags: Record<string, string> = {
   'Singapore': '🇸🇬',
   'Ireland': '🇮🇪',
   'Portugal': '🇵🇹',
+  'Greece': '🇬🇷',
+  'Turkey': '🇹🇷',
+  'Argentina': '🇦🇷',
+  'Vietnam': '🇻🇳',
+  'Indonesia': '🇮🇩',
+  'Malaysia': '🇲🇾',
+  'Egypt': '🇪🇬',
+  'Morocco': '🇲🇦',
+  'South Africa': '🇿🇦',
+  'United Arab Emirates': '🇦🇪',
+  'Austria': '🇦🇹',
+  'Czech Republic': '🇨🇿',
+  'Poland': '🇵🇱',
+  'Russia': '🇷🇺',
+  'Sweden': '🇸🇪',
+  'Denmark': '🇩🇰',
+  'Norway': '🇳🇴',
+  'Iceland': '🇮🇸',
+  'Belgium': '🇧🇪',
+  'Croatia': '🇭🇷',
+  'New Zealand': '🇳🇿',
 };
 
 const getCountryFlag = (country: string): string => {
@@ -39,7 +60,7 @@ const getCountryFlag = (country: string): string => {
 export function SelectCountryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { locations, loading, error, reload } = useLocations();
+  const { data, loading, error, reload } = useCountriesAndCities();
   const { reducedMotion } = useSettings();
   const hasAnimated = useRef(false);
 
@@ -50,17 +71,17 @@ export function SelectCountryScreen() {
     }
   }, [loading, error]);
 
-  // Extract unique countries from locations
+  // Map countries from API data
   const countries = useMemo(() => {
-    const uniqueCountries = Array.from(
-      new Set(locations.map(loc => loc.country))
-    ).sort();
+    if (!data) return [];
 
-    return uniqueCountries.map(country => ({
-      name: country,
-      flag: getCountryFlag(country),
+    return data.countries.map(country => ({
+      name: country.name,
+      code: country.code,
+      flag: getCountryFlag(country.name),
+      cityCount: country.cities.length,
     }));
-  }, [locations]);
+  }, [data]);
 
   const filteredCountries = countries.filter(country =>
     country.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -140,15 +161,22 @@ export function SelectCountryScreen() {
       </div>
 
       <div className="flex flex-col gap-3 mb-6">
-        {filteredCountries.map((country) => (
-          <div key={country.name}>
-            <ListItem
-              flag={country.flag}
-              title={country.name}
-              onClick={() => navigate('/onboarding/city', { state: { country: country.name } })}
-            />
-          </div>
-        ))}
+        {filteredCountries.length === 0 ? (
+          <p className="text-center text-[14px] py-8" style={{ color: 'var(--app-text-secondary)' }}>
+            No countries found matching "{searchQuery}"
+          </p>
+        ) : (
+          filteredCountries.map((country) => (
+            <div key={country.code}>
+              <ListItem
+                flag={country.flag}
+                title={country.name}
+                subtitle={`${country.cityCount} ${country.cityCount === 1 ? 'city' : 'cities'}`}
+                onClick={() => navigate('/onboarding/city', { state: { country: country.name } })}
+              />
+            </div>
+          ))
+        )}
       </div>
 
       <motion.button

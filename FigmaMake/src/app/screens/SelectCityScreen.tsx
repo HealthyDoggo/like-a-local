@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Input } from '@/app/components/Input';
 import { ListItem } from '@/app/components/ListItem';
 import { useNavigate, useLocation } from 'react-router';
-import { useLocations } from '@/hooks/useLocations';
+import { useCountriesAndCities } from '@/hooks/useCountriesAndCities';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
@@ -13,19 +13,27 @@ export function SelectCityScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const country = location.state?.country || 'United States';
-  const { locations, loading, error, reload } = useLocations();
+  const { data, loading, error, reload } = useCountriesAndCities();
   const { reducedMotion } = useSettings();
 
   // Filter cities by selected country
   const cities = useMemo(() => {
-    return locations
-      .filter(loc => loc.country === country)
-      .map(loc => loc.name)
-      .sort();
-  }, [locations, country]);
+    if (!data) return [];
+
+    const selectedCountry = data.countries.find(c => c.name === country);
+    if (!selectedCountry) return [];
+
+    return selectedCountry.cities
+      .map(city => ({
+        name: city.name,
+        latitude: city.latitude,
+        longitude: city.longitude,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data, country]);
 
   const filteredCities = cities.filter(city =>
-    city.toLowerCase().includes(searchQuery.toLowerCase())
+    city.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -102,14 +110,20 @@ export function SelectCityScreen() {
       </div>
 
       <div className="flex flex-col gap-3 mb-6">
-        {filteredCities.map((city) => (
-          <div key={city}>
-            <ListItem
-              title={city}
-              onClick={() => navigate('/onboarding/tips', { state: { country, city } })}
-            />
-          </div>
-        ))}
+        {filteredCities.length === 0 ? (
+          <p className="text-center text-[14px] py-8" style={{ color: 'var(--app-text-secondary)' }}>
+            {searchQuery ? `No cities found matching "${searchQuery}"` : 'No cities available'}
+          </p>
+        ) : (
+          filteredCities.map((city) => (
+            <div key={city.name}>
+              <ListItem
+                title={city.name}
+                onClick={() => navigate('/onboarding/tips', { state: { country, city: city.name } })}
+              />
+            </div>
+          ))
+        )}
       </div>
 
       <motion.button

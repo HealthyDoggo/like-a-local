@@ -58,3 +58,20 @@ export interface PromotedTipsParams {
   language?: string;
   limit?: number;
 }
+
+// Countries and Cities Types
+export interface CityInfo {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface CountryInfo {
+  name: string;
+  code: string;
+  cities: CityInfo[];
+}
+
+export interface CountriesCitiesResponse {
+  countries: CountryInfo[];
+}

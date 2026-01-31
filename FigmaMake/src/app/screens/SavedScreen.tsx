@@ -2,41 +2,33 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { TipCard } from '@/app/components/TipCard';
-import { tipsByCategory } from '@/app/data/tips';
 import { Heart } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
+import { useSavedTips } from '@/hooks/useSavedTips';
 
 export function SavedScreen() {
-  const [savedTips, setSavedTips] = useState<string[]>(() => {
-    const saved = localStorage.getItem('savedTips');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { getSavedTipsData, toggleSave, isSaved } = useSavedTips();
+  const [savedTipObjects, setSavedTipObjects] = useState(getSavedTipsData());
   const { reducedMotion } = useSettings();
 
   useEffect(() => {
     const handleStorage = () => {
-      const saved = localStorage.getItem('savedTips');
-      setSavedTips(saved ? JSON.parse(saved) : []);
+      setSavedTipObjects(getSavedTipsData());
     };
-    
+
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(handleStorage, 500);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
     };
   }, []);
 
-  const handleSave = (tipId: string) => {
-    const newSavedTips = savedTips.filter(id => id !== tipId);
-    setSavedTips(newSavedTips);
-    localStorage.setItem('savedTips', JSON.stringify(newSavedTips));
+  const handleUnsave = (tipId: string) => {
+    toggleSave(tipId);
+    setSavedTipObjects(getSavedTipsData());
   };
-
-  // Get all tips from all categories
-  const allTips = Object.values(tipsByCategory).flat();
-  const savedTipObjects = allTips.filter(tip => savedTips.includes(tip.id));
 
   return (
     <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
@@ -94,12 +86,10 @@ export function SavedScreen() {
                 <TipCard
                   id={tip.id}
                   category={tip.category}
-                  title={tip.title}
                   text={tip.text}
                   supportingText={tip.supportingText}
-                  highlightKeywords={tip.keywords}
-                  isSaved={true}
-                  onSave={handleSave}
+                  isSaved={isSaved(tip.id)}
+                  onSave={handleUnsave}
                 />
               </motion.div>
             ))}

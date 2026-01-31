@@ -4,6 +4,7 @@ import {
   LocationResponse,
   PromotedTipResponse,
   PromotedTipsParams,
+  CountriesCitiesResponse,
 } from '@/types/api.types';
 
 export const locationsService = {
@@ -16,6 +17,10 @@ export const locationsService = {
       name,
       country,
     });
+  },
+
+  async getCountriesAndCities(): Promise<CountriesCitiesResponse> {
+    return apiClient.get<CountriesCitiesResponse>(ENDPOINTS.COUNTRIES_CITIES);
   },
 
   async getPromotedTipsByName(params: PromotedTipsParams): Promise<PromotedTipResponse[]> {

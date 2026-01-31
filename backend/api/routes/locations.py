@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
+import json
+import os
 
 from backend.database.models import Location, Tip, TipPromotion
 from backend.api.dependencies import get_database
@@ -35,6 +37,25 @@ class PromotedTipResponse(BaseModel):
     promoted_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CityInfo(BaseModel):
+    """City information model"""
+    name: str
+    latitude: float
+    longitude: float
+
+
+class CountryInfo(BaseModel):
+    """Country information model"""
+    name: str
+    code: str
+    cities: List[CityInfo]
+
+
+class CountriesResponse(BaseModel):
+    """Countries and cities response model"""
+    countries: List[CountryInfo]
 
 
 @router.get("", response_model=List[LocationResponse])
@@ -96,6 +117,29 @@ def search_location(
         return None
 
     return LocationResponse.model_validate(location)
+
+
+@router.get("/countries-cities", response_model=CountriesResponse)
+def get_countries_and_cities():
+    """
+    Get comprehensive list of countries and their major cities.
+    Includes coordinates for mapping and location selection.
+    """
+    # Load cities data from JSON file
+    data_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "data",
+        "cities.json"
+    )
+
+    try:
+        with open(data_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return CountriesResponse(**data)
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Cities data file not found")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Error parsing cities data")
 
 
 @router.get("/{location_id}/promoted-tips", response_model=List[PromotedTipResponse])

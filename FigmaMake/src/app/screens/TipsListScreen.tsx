@@ -28,7 +28,16 @@ export function TipsListScreen() {
     category: category,
     text: tip.tip_text,
     supportingText: `${tip.mention_count} locals mentioned this`,
+    city: city,
+    country: country,
   }));
+
+  const handleSave = (tipId: string) => {
+    const tip = tips.find(t => t.id === tipId);
+    if (tip) {
+      toggleSave(tipId, tip);
+    }
+  };
 
   if (loading) {
     return (
@@ -142,7 +151,7 @@ export function TipsListScreen() {
                   text={tip.text}
                   supportingText={tip.supportingText}
                   isSaved={isSaved(tip.id)}
-                  onSave={toggleSave}
+                  onSave={handleSave}
                   onAuthRequired={() => setShowAuthModal(true)}
                 />
               </div>
