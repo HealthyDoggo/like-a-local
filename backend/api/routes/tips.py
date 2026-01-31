@@ -2,10 +2,11 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from pydantic import BaseModel, Field
 from datetime import datetime
 
-from backend.database.models import Tip, Location, Embedding
+from backend.database.models import Tip, Location, Embedding, TipTranslation
 from backend.api.dependencies import get_database
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
@@ -91,32 +92,62 @@ def create_tip(
 def get_tips(
     location_id: Optional[int] = Query(None, description="Filter by location ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    language: str = Query("en", description="Preferred language code (e.g., en, es, fr)"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_database)
 ):
-    """Query processed tips with optional filters"""
-    query = db.query(Tip)
-    
+    """
+    Query tips with language preference.
+
+    Returns tips in the requested language with fallback chain:
+    preferred language → English → original language
+    """
+    # Query tips with LEFT JOIN to get translation in preferred language
+    tips_query = (
+        db.query(Tip, TipTranslation.translated_text.label('preferred_translation'))
+        .outerjoin(
+            TipTranslation,
+            and_(
+                TipTranslation.tip_id == Tip.id,
+                TipTranslation.language_code == language
+            )
+        )
+    )
+
+    # Apply filters
     if location_id:
-        query = query.filter(Tip.location_id == location_id)
-    
+        tips_query = tips_query.filter(Tip.location_id == location_id)
+
     if status:
-        query = query.filter(Tip.status == status)
-    
-    tips = query.order_by(Tip.submitted_at.desc()).limit(limit).offset(offset).all()
-    
-    # Add location info to responses
+        tips_query = tips_query.filter(Tip.status == status)
+
+    # Execute query
+    results_data = tips_query.order_by(Tip.submitted_at.desc()).limit(limit).offset(offset).all()
+
+    # Build response with fallback chain
     results = []
-    for tip in tips:
+    for tip, preferred_translation in results_data:
+        # Fallback chain: preferred language → English → original
+        tip_text = (
+            preferred_translation or
+            tip.translated_text or
+            tip.tip_text
+        )
+
+        # Create response with translated text
         response = TipResponse.model_validate(tip)
+        response.tip_text = tip_text
+
+        # Add location info
         if tip.location_id:
             location = db.query(Location).filter(Location.id == tip.location_id).first()
             if location:
                 response.location_name = location.name
                 response.location_country = location.country
+
         results.append(response)
-    
+
     return results
 
 

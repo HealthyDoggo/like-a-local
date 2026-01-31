@@ -80,10 +80,10 @@ class ProcessingClient:
     def detect_language(self, text: str) -> str:
         """
         Detect language of text using PC's service.
-        
+
         Args:
             text: Text to analyze
-            
+
         Returns:
             Language code (e.g., "en", "es", "fr")
         """
@@ -100,6 +100,42 @@ class ProcessingClient:
             logger.error(f"Language detection request failed: {e}")
             # Fallback to simple heuristic
             return "en"
+
+    def translate_multi(
+        self,
+        text: str,
+        source_language: str,
+        target_languages: List[str],
+        timeout: int = 300
+    ) -> Dict[str, str]:
+        """
+        Translate text to multiple target languages.
+
+        Args:
+            text: Text to translate
+            source_language: ISO 639-1 source language code
+            target_languages: List of target language codes
+            timeout: Request timeout in seconds
+
+        Returns:
+            Dict mapping language codes to translated text
+        """
+        try:
+            response = requests.post(
+                f"{self.api_url}/translate-multi",
+                json={
+                    "text": text,
+                    "source_language": source_language,
+                    "target_languages": target_languages
+                },
+                timeout=timeout
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result.get("translations", {})
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Multi-language translation request failed: {e}")
+            raise
     
     def embed(self, text: str) -> List[float]:
         """

@@ -3,18 +3,99 @@ import logging
 from typing import List, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from backend.database.models import Tip, TipPromotion, Location, Embedding
+from backend.database.models import Tip, TipPromotion, Location, Embedding, TipTranslation
 from backend.services.embedding import get_embedding_service
+from backend.services.processing_client import get_processing_client
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Top 10 supported languages
+TOP_10_LANGUAGES = ["en", "es", "fr", "de", "pt", "it", "zh", "ja", "ar", "hi"]
+
 
 class PromotionService:
     """Service for promoting tips based on frequency and similarity"""
-    
+
     def __init__(self):
         self.embedding_service = get_embedding_service()
+        self.processing_client = get_processing_client()
+
+    def translate_tip_to_all_languages(self, tip: Tip, db: Session) -> bool:
+        """
+        Translate a tip to all supported languages.
+
+        Only translates if:
+        1. Tip has not been translated yet (no entries in TipTranslation)
+        2. PC processing service is available
+
+        Args:
+            tip: The tip to translate
+            db: Database session
+
+        Returns:
+            True if translation succeeded, False otherwise
+        """
+        # Check if translations already exist
+        existing = db.query(TipTranslation).filter(
+            TipTranslation.tip_id == tip.id
+        ).first()
+
+        if existing:
+            logger.info(f"Tip {tip.id} already has translations, skipping")
+            return True
+
+        # Determine source language and text
+        source_language = tip.original_language or "en"
+        source_text = tip.tip_text
+
+        # Determine which languages to translate to (exclude source language)
+        target_languages = [lang for lang in TOP_10_LANGUAGES if lang != source_language]
+
+        try:
+            # Call PC service for multi-language translation
+            logger.info(f"Translating tip {tip.id} from {source_language} to {len(target_languages)} languages")
+            translations = self.processing_client.translate_multi(
+                text=source_text,
+                source_language=source_language,
+                target_languages=target_languages
+            )
+
+            # Store original language translation
+            db.add(TipTranslation(
+                tip_id=tip.id,
+                language_code=source_language,
+                translated_text=source_text
+            ))
+
+            # Store English translation if we have it and it's different from source
+            if source_language != "en" and tip.translated_text:
+                db.add(TipTranslation(
+                    tip_id=tip.id,
+                    language_code="en",
+                    translated_text=tip.translated_text
+                ))
+
+            # Store all other translations
+            for lang_code, translated_text in translations.items():
+                # Skip if we already added it (original or English)
+                if lang_code == source_language or (lang_code == "en" and tip.translated_text):
+                    continue
+
+                db.add(TipTranslation(
+                    tip_id=tip.id,
+                    language_code=lang_code,
+                    translated_text=translated_text
+                ))
+
+            db.commit()
+            logger.info(f"Successfully translated tip {tip.id} to {len(translations)} languages")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to translate tip {tip.id}: {e}")
+            db.rollback()
+            return False
     
     def find_similar_tips(
         self,
@@ -112,7 +193,7 @@ class PromotionService:
                         TipPromotion.tip_text == canonical_text,
                         TipPromotion.location_id == location.id
                     ).first()
-                    
+
                     if existing:
                         # Update mention count
                         existing.mention_count = mention_count
@@ -137,6 +218,12 @@ class PromotionService:
                                 logger.error(f"Error calculating similarity: {e}")
                                 existing.similarity_score = 0.85
                     else:
+                        # Translate representative tip to all languages before promoting
+                        # Use the first tip in the group as the representative
+                        if group_tips:
+                            representative_tip = group_tips[0]
+                            self.translate_tip_to_all_languages(representative_tip, db)
+
                         # Create new promotion
                         promotion = TipPromotion(
                             tip_text=canonical_text,

@@ -1,6 +1,6 @@
 """NLLB translation service with proper language detection"""
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from backend.config import settings
@@ -176,20 +176,20 @@ class TranslationService:
         """Translate a batch of texts"""
         if not texts:
             return []
-        
+
         self._load_model()
-        
+
         # Detect language if not provided
         if not source_language:
             source_language = self.detect_language(texts[0])
-        
+
         # Convert ISO code to NLLB code
         source_lang_code = LANGUAGE_CODES.get(source_language, "eng_Latn")
-        
+
         # If already in target language, return as-is
         if source_lang_code == self.target_language:
             return texts
-        
+
         try:
             # Tokenize batch
             inputs = self.tokenizer(
@@ -199,7 +199,7 @@ class TranslationService:
                 truncation=True,
                 max_length=512
             ).to(self.device)
-            
+
             # Translate
             with torch.no_grad():
                 translated_tokens = self.model.generate(
@@ -207,19 +207,105 @@ class TranslationService:
                     forced_bos_token_id=self.tokenizer.lang_code_to_id[self.target_language],
                     max_length=512
                 )
-            
+
             # Decode
             translated_texts = self.tokenizer.batch_decode(
                 translated_tokens,
                 skip_special_tokens=True
             )
-            
+
             return translated_texts
-        
+
         except Exception as e:
             logger.error(f"Batch translation error: {e}")
             # Return original texts on error
             return texts
+
+    def translate_to_language(self, text: str, source_language: str, target_language: str) -> str:
+        """
+        Translate text from source language to a specific target language.
+
+        Args:
+            text: Text to translate
+            source_language: ISO 639-1 source language code (e.g., "en", "es")
+            target_language: ISO 639-1 target language code (e.g., "fr", "de")
+
+        Returns:
+            Translated text
+        """
+        if not text or not text.strip():
+            return text
+
+        # If source and target are the same, return original
+        if source_language == target_language:
+            return text
+
+        self._load_model()
+
+        # Convert ISO codes to NLLB codes
+        source_lang_code = LANGUAGE_CODES.get(source_language, "eng_Latn")
+        target_lang_code = LANGUAGE_CODES.get(target_language, "eng_Latn")
+
+        try:
+            # Tokenize
+            inputs = self.tokenizer(
+                text,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=512
+            ).to(self.device)
+
+            # Translate
+            with torch.no_grad():
+                translated_tokens = self.model.generate(
+                    **inputs,
+                    forced_bos_token_id=self.tokenizer.lang_code_to_id[target_lang_code],
+                    max_length=512
+                )
+
+            # Decode
+            translated_text = self.tokenizer.batch_decode(
+                translated_tokens,
+                skip_special_tokens=True
+            )[0]
+
+            return translated_text
+
+        except Exception as e:
+            logger.error(f"Translation error ({source_language} -> {target_language}): {e}")
+            # Return original text on error
+            return text
+
+    def translate_to_multiple_languages(
+        self,
+        text: str,
+        source_language: str,
+        target_languages: List[str]
+    ) -> dict:
+        """
+        Translate text to multiple target languages.
+        Skips translation if target == source.
+
+        Args:
+            text: Text to translate
+            source_language: ISO 639-1 source language code
+            target_languages: List of ISO 639-1 target language codes
+
+        Returns:
+            Dictionary mapping language codes to translated text
+        """
+        results = {}
+
+        for target_lang in target_languages:
+            if target_lang == source_language:
+                results[target_lang] = text  # Original text
+            else:
+                results[target_lang] = self.translate_to_language(
+                    text, source_language, target_lang
+                )
+
+        return results
 
 
 # Global instance

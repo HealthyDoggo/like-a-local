@@ -44,6 +44,30 @@ def health_check():
     return {"status": "healthy"}
 
 
+@app.get("/api/languages")
+def get_supported_languages():
+    """
+    Get list of supported languages for translation.
+
+    Returns:
+        List of language objects with code, English name, and native name
+    """
+    return {
+        "languages": [
+            {"code": "en", "name": "English", "native_name": "English"},
+            {"code": "es", "name": "Spanish", "native_name": "Español"},
+            {"code": "fr", "name": "French", "native_name": "Français"},
+            {"code": "de", "name": "German", "native_name": "Deutsch"},
+            {"code": "pt", "name": "Portuguese", "native_name": "Português"},
+            {"code": "it", "name": "Italian", "native_name": "Italiano"},
+            {"code": "zh", "name": "Chinese", "native_name": "中文"},
+            {"code": "ja", "name": "Japanese", "native_name": "日本語"},
+            {"code": "ar", "name": "Arabic", "native_name": "العربية"},
+            {"code": "hi", "name": "Hindi", "native_name": "हिन्दी"},
+        ]
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

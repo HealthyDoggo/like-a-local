@@ -10,7 +10,7 @@ The Raspberry Pi sends HTTP requests to this service for processing.
 """
 import logging
 import sys
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -83,6 +83,16 @@ class TranslateRequest(BaseModel):
 class TranslateResponse(BaseModel):
     translated_text: str
     detected_language: Optional[str] = None
+
+
+class TranslateMultiRequest(BaseModel):
+    text: str
+    source_language: str
+    target_languages: List[str]
+
+
+class TranslateMultiResponse(BaseModel):
+    translations: Dict[str, str]
 
 
 class DetectLanguageRequest(BaseModel):
@@ -158,12 +168,12 @@ def detect_language(request: DetectLanguageRequest):
 def translate(request: TranslateRequest):
     """
     Translate text to target language (typically English).
-    
+
     If source_language is not provided, it will be auto-detected.
     """
     try:
         translation_service = get_translation_service()
-        
+
         # Detect language if not provided
         detected_lang = None
         if not request.source_language:
@@ -171,19 +181,40 @@ def translate(request: TranslateRequest):
             source_lang = detected_lang
         else:
             source_lang = request.source_language
-        
+
         # Translate
         translated_text = translation_service.translate(
             request.text,
             source_language=source_lang
         )
-        
+
         return TranslateResponse(
             translated_text=translated_text,
             detected_language=detected_lang
         )
     except Exception as e:
         logger.error(f"Translation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/translate-multi", response_model=TranslateMultiResponse)
+def translate_to_multiple_languages(request: TranslateMultiRequest):
+    """
+    Translate text to multiple target languages in one request.
+
+    Used for translating promoted tips to all supported languages.
+    More efficient than making multiple individual translation requests.
+    """
+    try:
+        translation_service = get_translation_service()
+        translations = translation_service.translate_to_multiple_languages(
+            request.text,
+            request.source_language,
+            request.target_languages
+        )
+        return TranslateMultiResponse(translations=translations)
+    except Exception as e:
+        logger.error(f"Multi-language translation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

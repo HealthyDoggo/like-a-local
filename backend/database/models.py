@@ -59,16 +59,33 @@ class Embedding(Base):
 class TipPromotion(Base):
     """Tip promotion model"""
     __tablename__ = "tip_promotions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     tip_text = Column(Text, nullable=False)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
     mention_count = Column(Integer, default=1, nullable=False)
     similarity_score = Column(DECIMAL(5, 4), nullable=True)
     promoted_at = Column(TIMESTAMP, server_default=func.now())
-    
+
     __table_args__ = (
         Index('idx_promotion_location', 'location_id'),
         Index('idx_promotion_mentions', 'mention_count'),
+    )
+
+
+class TipTranslation(Base):
+    """Tip translation model for multi-language support"""
+    __tablename__ = "tip_translations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tip_id = Column(Integer, ForeignKey("tips.id", ondelete="CASCADE"), nullable=False)
+    language_code = Column(String(10), nullable=False)
+    translated_text = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, onupdate=func.now())
+
+    __table_args__ = (
+        Index('idx_translation_tip_lang', 'tip_id', 'language_code', unique=True),
+        Index('idx_translation_language', 'language_code'),
     )
 
