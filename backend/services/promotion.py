@@ -197,6 +197,16 @@ class PromotionService:
                 mention_count = len(group_tips)
 
                 if mention_count >= settings.min_mentions:
+                    # Determine most common category in the group
+                    category_counts = {}
+                    for t in group_tips:
+                        if t.category_id:
+                            category_counts[t.category_id] = category_counts.get(t.category_id, 0) + 1
+
+                    most_common_category = None
+                    if category_counts:
+                        most_common_category = max(category_counts.items(), key=lambda x: x[1])[0]
+
                     # Check if already promoted
                     existing = db.query(TipPromotion).filter(
                         TipPromotion.tip_text == canonical_text,
@@ -204,8 +214,9 @@ class PromotionService:
                     ).first()
 
                     if existing:
-                        # Update mention count
+                        # Update mention count and category
                         existing.mention_count = mention_count
+                        existing.category_id = most_common_category
                         # Calculate average similarity score
                         if group_tips:
                             try:
@@ -237,7 +248,8 @@ class PromotionService:
                             tip_text=canonical_text,
                             location_id=location.id,
                             mention_count=mention_count,
-                            similarity_score=0.85  # Default similarity
+                            similarity_score=0.85,  # Default similarity
+                            category_id=most_common_category
                         )
                         db.add(promotion)
                         promoted.append(promotion)

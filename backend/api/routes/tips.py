@@ -20,6 +20,7 @@ class TipCreate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     user_id: Optional[int] = None
+    category_id: Optional[str] = None
 
 
 class TipResponse(BaseModel):
@@ -35,7 +36,9 @@ class TipResponse(BaseModel):
     submitted_at: datetime
     processed_at: Optional[datetime]
     status: str
-    
+    category_id: Optional[str] = None
+    category_confidence: Optional[float] = None
+
     model_config = {"from_attributes": True}
 
 
@@ -71,7 +74,9 @@ def create_tip(
         tip_text=tip.tip_text,
         location_id=location_id,
         user_id=tip.user_id,
-        status="pending"
+        status="pending",
+        category_id=tip.category_id,
+        category_manual=bool(tip.category_id)
     )
     db.add(db_tip)
     db.commit()
@@ -91,6 +96,7 @@ def create_tip(
 @router.get("", response_model=List[TipResponse])
 def get_tips(
     location_id: Optional[int] = Query(None, description="Filter by location ID"),
+    category_id: Optional[str] = Query(None, description="Filter by category ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
     language: str = Query("en", description="Preferred language code (e.g., en, es, fr)"),
     limit: int = Query(100, ge=1, le=1000),
@@ -118,6 +124,9 @@ def get_tips(
     # Apply filters
     if location_id:
         tips_query = tips_query.filter(Tip.location_id == location_id)
+
+    if category_id:
+        tips_query = tips_query.filter(Tip.category_id == category_id)
 
     if status:
         tips_query = tips_query.filter(Tip.status == status)

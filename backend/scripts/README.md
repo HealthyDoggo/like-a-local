@@ -71,7 +71,58 @@ Creates the translations table in the database.
 python scripts/create_translations_table.py
 ```
 
+### `add_category_support.py`
+Migration script to add category support to the database schema.
+Adds category fields to tips and tip_promotions tables, and creates the categories table.
+
+```bash
+python scripts/add_category_support.py
+```
+
+### `init_categories.py`
+Initializes the categories table with 9 predefined categories and generates embeddings for their descriptions.
+Run this after `add_category_support.py` to populate the categories.
+
+```bash
+python scripts/init_categories.py
+```
+
+**Categories created:**
+- everyday-etiquette - Social norms, greetings, gestures, dress codes
+- food-dining - Restaurant etiquette, tipping, meal timing
+- getting-around - Transportation, navigation, travel
+- public-spaces - Parks, museums, religious sites
+- social-interactions - Making friends, conversations, relationships
+- cultural-customs - Holidays, festivals, traditions
+- locals-appreciate - Respectful behaviors, cultural appreciation
+- misunderstandings - Tourist mistakes, cultural misinterpretations
+- helpful-tips - Practical advice, safety, local secrets
+
+### `classify_existing_tips.py`
+Classifies all existing processed tips into categories using vector similarity.
+Run this after initializing categories to classify your existing tip data.
+
+```bash
+# Classify all unclassified tips
+python scripts/classify_existing_tips.py
+
+# The script processes tips in batches of 100 by default
+```
+
+**Note:** Tips are classified using cosine similarity with a 0.65 confidence threshold.
+Tips below the threshold remain unclassified and will be assigned a category during future processing.
+
 ## Quick Workflow
+
+**Initial setup with category support:**
+```bash
+cd backend
+python scripts/add_category_support.py
+python scripts/init_categories.py
+python scripts/seed_comprehensive_data.py --clear
+python -m backend.jobs.nightly_processor
+python scripts/classify_existing_tips.py
+```
 
 **Clear data, seed, and test embedding thresholds:**
 ```bash
@@ -79,4 +130,12 @@ cd backend
 python scripts/seed_comprehensive_data.py --clear
 python -m backend.jobs.nightly_processor
 python scripts/recluster_tips.py --threshold 0.85
+```
+
+**Classify existing tips after enabling categories:**
+```bash
+cd backend
+python scripts/add_category_support.py
+python scripts/init_categories.py
+python scripts/classify_existing_tips.py
 ```

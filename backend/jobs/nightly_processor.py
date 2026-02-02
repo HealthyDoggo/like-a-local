@@ -24,6 +24,7 @@ from backend.database.connection import SessionLocal
 from backend.database.models import Tip, Embedding
 from backend.services.processing_client import get_processing_client
 from backend.services.promotion import get_promotion_service
+from backend.services.category_classifier import get_category_classifier
 from backend.utils.wol import get_wol
 from backend.config import settings
 
@@ -219,6 +220,42 @@ def process_pending_tips(
 
     # Commit all changes
     db.commit()
+
+    # Classify tips by category (after embeddings are stored)
+    logger.info("Classifying tips into categories...")
+    try:
+        classifier = get_category_classifier()
+        classifier.load_categories(db)
+
+        classified_count = 0
+        for tip in pending_tips:
+            # Only classify if successfully processed and not manually categorized
+            if tip.status == "processed" and not tip.category_manual:
+                embedding_obj = db.query(Embedding).filter(
+                    Embedding.tip_id == tip.id
+                ).first()
+
+                if embedding_obj:
+                    try:
+                        category_id, confidence = classifier.classify_tip(
+                            embedding_obj.embedding
+                        )
+
+                        if classifier.should_assign_category(confidence):
+                            tip.category_id = category_id
+                            tip.category_confidence = confidence
+                            tip.category_assigned_at = datetime.utcnow()
+                            classified_count += 1
+                    except Exception as e:
+                        logger.error(f"Error classifying tip {tip.id}: {e}")
+
+        db.commit()
+        stats["classified"] = classified_count
+        logger.info(f"Classified {classified_count} tips into categories")
+
+    except Exception as e:
+        logger.error(f"Category classification error: {e}")
+        stats["classification_errors"] = 1
 
     logger.info(f"Processing complete: {stats}")
     return stats
