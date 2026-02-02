@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { CategoryCard } from '@/app/components/CategoryCard';
 import { BottomNav } from '@/app/components/BottomNav';
 import { categories } from '@/app/data/categories';
-import { usePromotedTips } from '@/hooks/useTips';
+import { useCategoryCounts } from '@/hooks/useCategoryCounts';
 import { useSettings } from '@/hooks/useSettings';
 
 export function CityOverviewScreen() {
@@ -13,9 +13,8 @@ export function CityOverviewScreen() {
   const country = location.state?.country || 'Japan';
   const { reducedMotion } = useSettings();
 
-  // Fetch tips to get total count
-  const { tips } = usePromotedTips(city, country, 100);
-  const totalTips = tips.length;
+  // Fetch category counts for this location
+  const { categoryCounts } = useCategoryCounts(city, country);
 
   return (
     <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
@@ -42,9 +41,9 @@ export function CityOverviewScreen() {
                 <CategoryCard
                   icon={category.icon}
                   title={category.title}
-                  tipCount={totalTips}
+                  tipCount={categoryCounts[category.id] || 0}
                   iconColor={category.color}
-                  onClick={() => navigate('/tips', { state: { city, country, category: category.title } })}
+                  onClick={() => navigate('/tips', { state: { city, country, categoryId: category.id, category: category.title } })}
                 />
               </div>
             ))}

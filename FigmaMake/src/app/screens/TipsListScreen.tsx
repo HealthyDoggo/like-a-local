@@ -15,9 +15,9 @@ import { useSettings } from '@/hooks/useSettings';
 export function TipsListScreen() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { city = 'Tokyo', country = 'Japan', category = 'Food & Dining' } = location.state || {};
+  const { city = 'Tokyo', country = 'Japan', categoryId, category = 'All Tips' } = location.state || {};
 
-  const { tips: apiTips, loading, error } = usePromotedTips(city, country, 100);
+  const { tips: apiTips, loading, error } = usePromotedTips(city, country, categoryId, 100);
   const { toggleSave, isSaved } = useSavedTips();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { reducedMotion } = useSettings();

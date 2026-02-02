@@ -11,7 +11,7 @@ export function SignUpScreen() {
     console.log('Sign up with:', method);
     // Simulate successful sign-up
     localStorage.setItem('isLoggedIn', 'true');
-    navigate('/home');
+    navigate('/intent');
   };
 
   return (

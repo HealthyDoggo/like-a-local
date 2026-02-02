@@ -20,6 +20,8 @@ export interface TipResponse {
   submitted_at: string;
   processed_at?: string;
   status: string;
+  category_id?: string;
+  category_confidence?: number;
 }
 
 export interface TipCreate {
@@ -29,6 +31,7 @@ export interface TipCreate {
   latitude?: number;
   longitude?: number;
   user_id?: number;
+  category_id?: string;
 }
 
 // Promoted Tip Types
@@ -41,11 +44,23 @@ export interface PromotedTipResponse {
   mention_count: number;
   similarity_score?: number;
   promoted_at: string;
+  category_id?: string;
+}
+
+// Category Types
+export interface CategoryResponse {
+  id: string;
+  title: string;
+  description: string;
+  icon_name?: string;
+  color?: string;
+  display_order?: number;
 }
 
 // Query Parameters
 export interface TipsQueryParams {
   location_id?: number;
+  category_id?: string;
   status?: string;
   language?: string;
   limit?: number;
@@ -55,6 +70,7 @@ export interface TipsQueryParams {
 export interface PromotedTipsParams {
   location_name: string;
   location_country: string;
+  category_id?: string;
   language?: string;
   limit?: number;
 }
@@ -62,8 +78,8 @@ export interface PromotedTipsParams {
 // Countries and Cities Types
 export interface CityInfo {
   name: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface CountryInfo {

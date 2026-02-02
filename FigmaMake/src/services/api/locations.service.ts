@@ -12,11 +12,8 @@ export const locationsService = {
     return apiClient.get<LocationResponse[]>(ENDPOINTS.LOCATIONS);
   },
 
-  async search(name: string, country: string): Promise<LocationResponse | null> {
-    return apiClient.get<LocationResponse | null>(ENDPOINTS.LOCATION_SEARCH, {
-      name,
-      country,
-    });
+  async search(params: { name: string; country: string }): Promise<LocationResponse | null> {
+    return apiClient.get<LocationResponse | null>(ENDPOINTS.LOCATION_SEARCH, params);
   },
 
   async getCountriesAndCities(): Promise<CountriesCitiesResponse> {
@@ -25,5 +22,11 @@ export const locationsService = {
 
   async getPromotedTipsByName(params: PromotedTipsParams): Promise<PromotedTipResponse[]> {
     return apiClient.get<PromotedTipResponse[]>(ENDPOINTS.PROMOTED_TIPS, params);
+  },
+
+  async getCategoryCounts(locationId: number): Promise<Record<string, number>> {
+    return apiClient.get<Record<string, number>>(
+      `${ENDPOINTS.LOCATIONS}/${locationId}/category-counts`
+    );
   },
 };

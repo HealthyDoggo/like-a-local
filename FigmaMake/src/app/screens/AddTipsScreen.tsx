@@ -28,6 +28,7 @@ export function AddTipsScreen() {
   const [tips, setTips] = useState<TipCard[]>([
     { id: 1, title: '', body: '', supportingInfo: '', showSupportingInfo: false }
   ]);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const navigate = useNavigate();
   const location = useLocation();
   const { country, city } = location.state || { country: null, city: null };
@@ -90,6 +91,7 @@ export function AddTipsScreen() {
           tip_text: fullText,
           location_name: city,
           location_country: country,
+          category_id: selectedCategory,
         });
       }
 

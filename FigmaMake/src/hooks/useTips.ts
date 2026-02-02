@@ -4,7 +4,12 @@ import { TipResponse, PromotedTipResponse, TipCreate } from '@/types/api.types';
 import { ApiError } from '@/services/api/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export function usePromotedTips(locationName: string, locationCountry: string, limit = 20) {
+export function usePromotedTips(
+  locationName: string,
+  locationCountry: string,
+  categoryId?: string,
+  limit = 20
+) {
   const [tips, setTips] = useState<PromotedTipResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +30,7 @@ export function usePromotedTips(locationName: string, locationCountry: string, l
         const data = await locationsService.getPromotedTipsByName({
           location_name: locationName,
           location_country: locationCountry,
+          category_id: categoryId,
           language,
           limit,
         });
@@ -52,7 +58,7 @@ export function usePromotedTips(locationName: string, locationCountry: string, l
     return () => {
       cancelled = true;
     };
-  }, [locationName, locationCountry, language, limit]);
+  }, [locationName, locationCountry, categoryId, language, limit]);
 
   return { tips, loading, error };
 }
