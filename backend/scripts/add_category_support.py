@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.database.connection import engine
 from sqlalchemy import text, create_engine
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv('../.env')
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
