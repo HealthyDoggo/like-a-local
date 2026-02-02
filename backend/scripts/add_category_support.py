@@ -6,8 +6,11 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database.connection import engine
-from sqlalchemy import text
-
+from sqlalchemy import text, create_engine
+from dotenv import load_dotenv
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
 
 def run_migration():
     """Add category support: categories table, category fields to tips and tip_promotions"""
