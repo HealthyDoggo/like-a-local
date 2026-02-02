@@ -25,10 +25,10 @@ def classify_existing_tips(batch_size=100):
         classifier = get_category_classifier()
         classifier.load_categories(db)
 
-        # Get count of unclassified tips
+        # Get count of unclassified tips (never processed for categories)
         unclassified_count = db.query(Tip).join(Embedding).filter(
             Tip.status == "processed",
-            Tip.category_id.is_(None)
+            Tip.category_assigned_at.is_(None)
         ).count()
 
         logger.info(f"Found {unclassified_count} unclassified tips")
@@ -42,10 +42,10 @@ def classify_existing_tips(batch_size=100):
         classified = 0
 
         while True:
-            # Get batch of unclassified tips with embeddings
+            # Get batch of unprocessed tips with embeddings
             batch = db.query(Tip).join(Embedding).filter(
                 Tip.status == "processed",
-                Tip.category_id.is_(None)
+                Tip.category_assigned_at.is_(None)
             ).limit(batch_size).all()
 
             if not batch:
@@ -62,11 +62,16 @@ def classify_existing_tips(batch_size=100):
                             embedding_obj.embedding
                         )
 
+                        # Always mark as processed
+                        tip.category_assigned_at = datetime.utcnow()
+
                         if classifier.should_assign_category(confidence):
                             tip.category_id = category_id
                             tip.category_confidence = confidence
-                            tip.category_assigned_at = datetime.utcnow()
                             classified += 1
+                        else:
+                            # Log tips with low confidence
+                            logger.debug(f"Tip {tip.id}: confidence {confidence:.3f} too low, not assigning category")
                     except Exception as e:
                         logger.error(f"Error classifying tip {tip.id}: {e}")
 
