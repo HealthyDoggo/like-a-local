@@ -1,11 +1,10 @@
 """Location API endpoints"""
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel
 from datetime import datetime
-import json
-import os
 
 from backend.database.models import Location, Tip, TipPromotion
 from backend.api.dependencies import get_database
@@ -35,6 +34,7 @@ class PromotedTipResponse(BaseModel):
     mention_count: int
     similarity_score: Optional[float] = None
     promoted_at: datetime
+    category_id: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -42,8 +42,8 @@ class PromotedTipResponse(BaseModel):
 class CityInfo(BaseModel):
     """City information model"""
     name: str
-    latitude: float
-    longitude: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class CountryInfo(BaseModel):
@@ -120,31 +120,51 @@ def search_location(
 
 
 @router.get("/countries-cities", response_model=CountriesResponse)
-def get_countries_and_cities():
+def get_countries_and_cities(
+    db: Session = Depends(get_database)
+):
     """
     Get comprehensive list of countries and their major cities.
     Includes coordinates for mapping and location selection.
     """
     # Load cities data from JSON file
-    data_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "data",
-        "cities.json"
-    )
+    locations = db.query(Location).all()
+    countries = []
+    country_indices = {}
+    for location in locations:
+        if location.country not in country_indices:
+            country_indices[location.country] = len(countries)
+            countries.append(CountryInfo(name=location.country, code=location.country, cities=[]))
+        countries[country_indices[location.country]].cities.append(CityInfo(name=location.name, latitude=location.latitude, longitude=location.longitude))
+    return CountriesResponse(countries=countries)
 
-    try:
-        with open(data_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return CountriesResponse(**data)
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="Cities data file not found")
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Error parsing cities data")
+
+@router.get("/{location_id}/category-counts")
+def get_category_counts(
+    location_id: int,
+    db: Session = Depends(get_database)
+) -> Dict[str, int]:
+    """Get tip counts per category for a location"""
+    location = db.query(Location).filter(Location.id == location_id).first()
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    counts = db.query(
+        Tip.category_id,
+        func.count(Tip.id).label('count')
+    ).filter(
+        Tip.location_id == location_id,
+        Tip.status == 'processed',
+        Tip.category_id.isnot(None)
+    ).group_by(Tip.category_id).all()
+
+    return {category: count for category, count in counts}
 
 
 @router.get("/{location_id}/promoted-tips", response_model=List[PromotedTipResponse])
 def get_location_promoted_tips(
     location_id: int,
+    category_id: Optional[str] = Query(None, description="Filter by category ID"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of tips to return"),
     db: Session = Depends(get_database)
 ):
@@ -153,9 +173,14 @@ def get_location_promoted_tips(
     if not location:
         raise HTTPException(status_code=404, detail="Location not found")
 
-    promoted_tips = db.query(TipPromotion).filter(
+    query = db.query(TipPromotion).filter(
         TipPromotion.location_id == location_id
-    ).order_by(TipPromotion.mention_count.desc()).limit(limit).all()
+    )
+
+    if category_id:
+        query = query.filter(TipPromotion.category_id == category_id)
+
+    promoted_tips = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
 
     results = []
     for tip in promoted_tips:
@@ -175,6 +200,7 @@ promoted_router = APIRouter(prefix="/api/promoted-tips", tags=["promoted-tips"])
 def get_promoted_tips_by_location_name(
     location_name: str = Query(..., description="Location name"),
     location_country: str = Query(..., description="Country name"),
+    category_id: Optional[str] = Query(None, description="Filter by category ID"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of tips to return"),
     db: Session = Depends(get_database)
 ):
@@ -193,9 +219,14 @@ def get_promoted_tips_by_location_name(
         return []
 
     # Get promoted tips
-    promoted_tips = db.query(TipPromotion).filter(
+    query = db.query(TipPromotion).filter(
         TipPromotion.location_id == location.id
-    ).order_by(TipPromotion.mention_count.desc()).limit(limit).all()
+    )
+
+    if category_id:
+        query = query.filter(TipPromotion.category_id == category_id)
+
+    promoted_tips = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
 
     results = []
     for tip in promoted_tips:
