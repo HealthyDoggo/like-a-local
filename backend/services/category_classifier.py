@@ -4,9 +4,11 @@ from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session
 from backend.database.models import Category
 from backend.services.embedding import get_embedding_service
-
+from dotenv import load_dotenv
+import os
+load_dotenv()
 logger = logging.getLogger(__name__)
-
+CATEGORY_CONFIDENCE_THRESHOLD = float(os.getenv("CATEGORY_CONFIDENCE_THRESHOLD", "0.65"))
 
 class CategoryClassifier:
     """Classifies tips into categories using cosine similarity"""
@@ -14,7 +16,7 @@ class CategoryClassifier:
     def __init__(self):
         self.embedding_service = get_embedding_service()
         self.categories = None
-        self.confidence_threshold = 0.65
+        self.confidence_threshold = CATEGORY_CONFIDENCE_THRESHOLD
 
     def load_categories(self, db: Session):
         """Load categories from database"""
