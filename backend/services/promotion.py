@@ -143,46 +143,55 @@ class PromotionService:
         
         return similar_tips
     
-    def promote_tips(self, db: Session) -> List[TipPromotion]:
-        """Promote tips that are mentioned frequently by locals"""
+    def promote_tips(self, db: Session, skip_translation: bool = False) -> List[TipPromotion]:
+        """
+        Promote tips that are mentioned frequently by locals.
+
+        Args:
+            db: Database session
+            skip_translation: If True, skip translating tips (useful for reclustering)
+
+        Returns:
+            List of promoted tips
+        """
         promoted = []
-        
+
         # Get all locations
         locations = db.query(Location).all()
-        
+
         for location in locations:
             # Get all processed tips for this location
             tips = db.query(Tip).filter(
                 Tip.location_id == location.id,
                 Tip.status == "processed"
             ).all()
-            
+
             # Group similar tips
             processed_tips = set()
             tip_groups: Dict[str, List[Tip]] = {}
-            
+
             for tip in tips:
                 if tip.id in processed_tips:
                     continue
-                
+
                 # Find similar tips
                 similar = self.find_similar_tips(
                     tip.translated_text or tip.tip_text,
                     location.id,
                     db
                 )
-                
+
                 # Create a canonical representation (use the most common text)
                 canonical_text = tip.translated_text or tip.tip_text
-                
+
                 # Add all similar tips to the group
                 group_tips = [tip] + [t for t in similar if t.id not in processed_tips]
                 tip_groups[canonical_text] = group_tips
-                
+
                 # Mark as processed
                 for t in group_tips:
                     processed_tips.add(t.id)
-            
+
             # Promote groups with enough mentions
             for canonical_text, group_tips in tip_groups.items():
                 mention_count = len(group_tips)
@@ -218,9 +227,8 @@ class PromotionService:
                                 logger.error(f"Error calculating similarity: {e}")
                                 existing.similarity_score = 0.85
                     else:
-                        # Translate representative tip to all languages before promoting
-                        # Use the first tip in the group as the representative
-                        if group_tips:
+                        # Only translate if not skipping (for reclustering, we skip)
+                        if not skip_translation and group_tips:
                             representative_tip = group_tips[0]
                             self.translate_tip_to_all_languages(representative_tip, db)
 
@@ -233,7 +241,7 @@ class PromotionService:
                         )
                         db.add(promotion)
                         promoted.append(promotion)
-        
+
         db.commit()
         return promoted
 

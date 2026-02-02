@@ -122,10 +122,11 @@ def recluster_tips(
         settings.min_mentions = min_mentions
 
     try:
-        # Run promotion logic
+        # Run promotion logic (skip translation since we're just reclustering)
         print(f"\n🔄 Running clustering with threshold={settings.similarity_threshold}, min_mentions={settings.min_mentions}...")
+        print(f"   Skipping translation (only re-evaluating distances)...")
         promotion_service = get_promotion_service()
-        promoted = promotion_service.promote_tips(db)
+        promoted = promotion_service.promote_tips(db, skip_translation=True)
 
         print(f"\n✅ Clustering complete!")
         print(f"   New promotions created: {len(promoted)}")

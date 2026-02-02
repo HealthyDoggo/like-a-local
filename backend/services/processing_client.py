@@ -19,6 +19,16 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _get_wol():
+    """Lazy import WOL to avoid circular dependencies"""
+    try:
+        from backend.utils.wol import get_wol
+        return get_wol()
+    except Exception as e:
+        logger.warning(f"Wake-on-LAN not available: {e}")
+        return None
+
+
 class ProcessingClient:
     """
     Client for communicating with PC-based processing service.
@@ -31,7 +41,7 @@ class ProcessingClient:
     def __init__(self, pc_api_url: Optional[str] = None):
         """
         Initialize processing client.
-        
+
         Args:
             pc_api_url: URL of PC's processing API (e.g., http://192.168.1.100:8001)
                        If None, uses settings.pc_ip_address with default port 8001
@@ -46,8 +56,23 @@ class ProcessingClient:
             if not pc_ip:
                 raise ValueError("PC IP address not configured in settings")
             self.api_url = f"http://{pc_ip}:{settings.pc_processing_api_port}"
-        
+
         self.timeout = 300  # 5 minutes timeout for processing
+
+    def _ensure_pc_awake(self) -> bool:
+        """
+        Ensure PC is awake before making requests.
+
+        Returns:
+            True if PC is awake, False otherwise
+        """
+        wol = _get_wol()
+        if wol:
+            return wol.wake()
+        else:
+            # If WOL not available, assume PC is awake
+            logger.debug("Wake-on-LAN not available, assuming PC is awake")
+            return True
     
     def translate(self, text: str, source_language: Optional[str] = None) -> str:
         """
@@ -120,6 +145,11 @@ class ProcessingClient:
         Returns:
             Dict mapping language codes to translated text
         """
+        # Ensure PC is awake before making request
+        if not self._ensure_pc_awake():
+            logger.error("Failed to wake PC for translation")
+            raise ConnectionError("PC is not reachable")
+
         try:
             response = requests.post(
                 f"{self.api_url}/translate-multi",
@@ -140,13 +170,18 @@ class ProcessingClient:
     def embed(self, text: str) -> List[float]:
         """
         Generate embedding vector using PC's miniLM-v6 service.
-        
+
         Args:
             text: Text to embed
-            
+
         Returns:
             List of 384 float values representing the embedding vector
         """
+        # Ensure PC is awake before making request
+        if not self._ensure_pc_awake():
+            logger.error("Failed to wake PC for embedding")
+            raise ConnectionError("PC is not reachable")
+
         try:
             response = requests.post(
                 f"{self.api_url}/embed",
