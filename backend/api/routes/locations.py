@@ -67,40 +67,6 @@ def get_locations(
     return [LocationResponse.model_validate(loc) for loc in locations]
 
 
-@router.get("/{location_id}", response_model=LocationResponse)
-def get_location(
-    location_id: int,
-    db: Session = Depends(get_database)
-):
-    """Get a specific location by ID"""
-    location = db.query(Location).filter(Location.id == location_id).first()
-    if not location:
-        raise HTTPException(status_code=404, detail="Location not found")
-    return LocationResponse.model_validate(location)
-
-
-@router.get("/{location_id}/tips", response_model=List[TipResponse])
-def get_location_tips(
-    location_id: int,
-    db: Session = Depends(get_database)
-):
-    """Get tips for a specific location"""
-    location = db.query(Location).filter(Location.id == location_id).first()
-    if not location:
-        raise HTTPException(status_code=404, detail="Location not found")
-
-    tips = db.query(Tip).filter(Tip.location_id == location_id).order_by(Tip.submitted_at.desc()).all()
-
-    results = []
-    for tip in tips:
-        response = TipResponse.model_validate(tip)
-        response.location_name = location.name
-        response.location_country = location.country
-        results.append(response)
-
-    return results
-
-
 @router.get("/search", response_model=Optional[LocationResponse])
 def search_location(
     name: str = Query(..., description="Location name"),
@@ -137,6 +103,40 @@ def get_countries_and_cities(
             countries.append(CountryInfo(name=location.country, code=location.country, cities=[]))
         countries[country_indices[location.country]].cities.append(CityInfo(name=location.name, latitude=location.latitude, longitude=location.longitude))
     return CountriesResponse(countries=countries)
+
+
+@router.get("/{location_id}", response_model=LocationResponse)
+def get_location(
+    location_id: int,
+    db: Session = Depends(get_database)
+):
+    """Get a specific location by ID"""
+    location = db.query(Location).filter(Location.id == location_id).first()
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+    return LocationResponse.model_validate(location)
+
+
+@router.get("/{location_id}/tips", response_model=List[TipResponse])
+def get_location_tips(
+    location_id: int,
+    db: Session = Depends(get_database)
+):
+    """Get tips for a specific location"""
+    location = db.query(Location).filter(Location.id == location_id).first()
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    tips = db.query(Tip).filter(Tip.location_id == location_id).order_by(Tip.submitted_at.desc()).all()
+
+    results = []
+    for tip in tips:
+        response = TipResponse.model_validate(tip)
+        response.location_name = location.name
+        response.location_country = location.country
+        results.append(response)
+
+    return results
 
 
 @router.get("/{location_id}/category-counts")
