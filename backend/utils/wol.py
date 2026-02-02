@@ -158,3 +158,10 @@ def get_wol() -> WakeOnLAN:
         ip_address=settings.pc_ip_address,
         port=settings.pc_port
     )
+
+if __name__ == "__main__":
+    wol = get_wol()
+    if wol.wake(retries=5, retry_delay=6):
+        print("PC successfully awakened")
+    else:
+        print("Failed to wake PC")
