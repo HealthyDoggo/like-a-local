@@ -36,6 +36,22 @@ def reset_categories():
         print(f"✓ Reset {tips_reset} tips and {promotions_reset} promotions")
 
 
+def reset_unclassified_only():
+    """Reset only tips that were processed but not assigned a category"""
+    print("Resetting unclassified tips only...")
+    
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            UPDATE tips 
+            SET category_assigned_at = NULL
+            WHERE category_assigned_at IS NOT NULL 
+              AND category_id IS NULL
+        """))
+        
+        conn.commit()
+        print(f"✓ Reset {result.rowcount} unclassified tips for reprocessing")
+
+
 if __name__ == "__main__":
     import sys
 
@@ -57,17 +73,3 @@ if __name__ == "__main__":
         reset_categories()
 
 
-def reset_unclassified_only():
-    """Reset only tips that were processed but not assigned a category"""
-    print("Resetting unclassified tips only...")
-    
-    with engine.connect() as conn:
-        result = conn.execute(text("""
-            UPDATE tips 
-            SET category_assigned_at = NULL
-            WHERE category_assigned_at IS NOT NULL 
-              AND category_id IS NULL
-        """))
-        
-        conn.commit()
-        print(f"✓ Reset {result.rowcount} unclassified tips for reprocessing")
