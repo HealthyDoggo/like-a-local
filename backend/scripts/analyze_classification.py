@@ -64,7 +64,7 @@ def analyze_classifications(limit=50, min_confidence=None, max_confidence=None):
             matching_phrase = category.description[phrase_idx]
 
             print(f"Tip ID: {tip.id}")
-            print(f"Text: {tip.text[:100]}{'...' if len(tip.text) > 100 else ''}")
+            print(f"Text: {tip.tip_text[:100]}{'...' if len(tip.tip_text) > 100 else ''}")
             print(f"Category: {category.title} ({category_id})")
             print(f"Confidence: {confidence:.3f}")
             print(f"Best matching phrase: '{matching_phrase}'")
@@ -144,7 +144,7 @@ def analyze_unclassified(limit=20):
             matching_phrase = category.description[phrase_idx]
 
             print(f"Tip ID: {tip.id}")
-            print(f"Text: {tip.text[:100]}{'...' if len(tip.text) > 100 else ''}")
+            print(f"Text: {tip.tip_text[:100]}{'...' if len(tip.tip_text) > 100 else ''}")
             print(f"Best match: {category.title} ({category_id})")
             print(f"Confidence: {confidence:.3f} (below threshold)")
             print(f"Would match phrase: '{matching_phrase}'")

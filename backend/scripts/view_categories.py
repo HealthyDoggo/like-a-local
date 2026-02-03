@@ -32,7 +32,7 @@ def view_tips_by_category():
 
             for tip in samples:
                 confidence = f" [{tip.category_confidence:.3f}]" if tip.category_confidence else ""
-                print(f"  - {tip.text[:80]}...{confidence}")
+                print(f"  - {tip.tip_text[:80]}...{confidence}")
             if samples:
                 print()
 
@@ -44,7 +44,7 @@ def view_tips_by_category():
         samples = db.query(Tip).filter(Tip.category_id.is_(None)).limit(5).all()
         for tip in samples:
             processed = " [processed]" if tip.category_assigned_at else " [not processed]"
-            print(f"  - {tip.text[:80]}...{processed}")
+            print(f"  - {tip.tip_text[:80]}...{processed}")
 
         print(f"\nTotal: {total_tips + unclassified} tips")
 

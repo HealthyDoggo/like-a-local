@@ -77,14 +77,14 @@ def classify_existing_tips(batch_size=100):
 
                             # Log successful classification with details
                             logger.info(
-                                f"Tip {tip.id}: '{tip.text[:60]}...' -> "
+                                f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
                                 f"{category_id} (confidence: {confidence:.3f}, "
                                 f"matched phrase: '{matching_phrase}')"
                             )
                         else:
                             # Log tips with low confidence
                             logger.info(
-                                f"Tip {tip.id}: '{tip.text[:60]}...' -> "
+                                f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
                                 f"{category_id} (confidence: {confidence:.3f} too low, "
                                 f"matched phrase: '{matching_phrase}', not assigned)"
                             )
