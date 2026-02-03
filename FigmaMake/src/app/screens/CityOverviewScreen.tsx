@@ -2,9 +2,11 @@ import { motion } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router';
 import { CategoryCard } from '@/app/components/CategoryCard';
 import { BottomNav } from '@/app/components/BottomNav';
-import { categories } from '@/app/data/categories';
-import { useCategoryCounts } from '@/hooks/useCategoryCounts';
+import { useCategories } from '@/hooks/useCategories';
 import { useSettings } from '@/hooks/useSettings';
+import { ErrorMessage } from '@/app/components/ErrorMessage';
+import { ArrowLeft, Lightbulb } from 'lucide-react';
+import { Button } from '@/app/components/Button';
 
 export function CityOverviewScreen() {
   const location = useLocation();
@@ -13,20 +15,31 @@ export function CityOverviewScreen() {
   const country = location.state?.country || 'Japan';
   const { reducedMotion } = useSettings();
 
-  // Fetch category counts for this location
-  const { categoryCounts } = useCategoryCounts(city, country);
+  // Fetch categories and counts from backend
+  const { categories, loading, error } = useCategories(city, country);
 
   return (
     <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-        <motion.h1
+        <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-          className="text-[24px] leading-[28px] mb-6"
-          style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+          className="flex items-center gap-3 mb-6"
         >
-          {city}
-        </motion.h1>
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2"
+            style={{ color: 'var(--app-text-accent)' }}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1
+            className="text-[24px] leading-[28px]"
+            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+          >
+            {city}
+          </h1>
+        </motion.div>
 
         <div className="mb-4">
           <h2 className="text-[18px] leading-[24px] mb-4" style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
@@ -34,21 +47,53 @@ export function CityOverviewScreen() {
           </h2>
         </div>
 
-        <div className="overflow-x-auto -mx-5 px-5">
-          <div className="flex gap-4 pb-4">
-            {categories.map((category) => (
-              <div key={category.id}>
-                <CategoryCard
-                  icon={category.icon}
-                  title={category.title}
-                  tipCount={categoryCounts[category.id] || 0}
-                  iconColor={category.color}
-                  onClick={() => navigate('/tips', { state: { city, country, categoryId: category.id, category: category.title } })}
-                />
-              </div>
-            ))}
+        {loading ? (
+          <div className="text-center py-8" style={{ color: 'var(--app-text-secondary)' }}>
+            Loading categories...
           </div>
-        </div>
+        ) : error || categories.length === 0 ? (
+          <div>
+            {error && (
+              <div className="mb-6">
+                <ErrorMessage message={error} />
+              </div>
+            )}
+            <div className="mb-6">
+              <p className="text-center text-[14px] mb-4" style={{ color: 'var(--app-text-secondary)' }}>
+                {error ? 'Unable to load categories. View general tips instead:' : 'No categories available yet. View general tips:'}
+              </p>
+            </div>
+            <div className="overflow-x-auto -mx-5 px-5">
+              <div className="flex gap-4 pb-4">
+                <div>
+                  <CategoryCard
+                    icon={Lightbulb}
+                    title="All Tips"
+                    tipCount={0}
+                    iconColor="teal"
+                    onClick={() => navigate('/tips', { state: { city, country, categoryId: undefined, category: 'All Tips' } })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-5 px-5">
+            <div className="flex gap-4 pb-4">
+              {categories.map((category) => (
+                <div key={category.id}>
+                  <CategoryCard
+                    icon={category.icon}
+                    title={category.title}
+                    tipCount={category.tipCount}
+                    iconColor={category.color}
+                    onClick={() => navigate('/tips', { state: { city, country, categoryId: category.id, category: category.title } })}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <BottomNav />

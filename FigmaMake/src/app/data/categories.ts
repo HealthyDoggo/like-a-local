@@ -1,3 +1,9 @@
+/**
+ * @deprecated This file contains hardcoded categories and is no longer used.
+ * Categories are now fetched dynamically from the backend via useCategories hook.
+ * See: /hooks/useCategories.ts
+ */
+
 import { Utensils, Train, MessageCircle, TreePine, Users, Sparkles, Heart, AlertCircle, Lightbulb, LucideIcon } from 'lucide-react';
 
 export interface Category {
@@ -8,6 +14,10 @@ export interface Category {
   color: 'teal' | 'yellow';
 }
 
+/**
+ * @deprecated These hardcoded categories are no longer used.
+ * Use the useCategories hook instead to fetch categories from the backend.
+ */
 export const categories: Category[] = [
   { id: 'everyday-etiquette', icon: Sparkles, title: 'Everyday Etiquette', tipCount: 15, color: 'teal' },
   { id: 'food-dining', icon: Utensils, title: 'Food & Dining', tipCount: 12, color: 'yellow' },

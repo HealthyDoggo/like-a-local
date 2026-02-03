@@ -5,4 +5,5 @@ export const ENDPOINTS = {
   TIPS: '/api/tips',
   PROMOTED_TIPS: '/api/promoted-tips',
   LANGUAGES: '/api/languages',
+  CATEGORIES: '/api/categories',
 } as const;

@@ -26,4 +26,16 @@ class CategoryResponse(BaseModel):
 def get_categories(db: Session = Depends(get_db)):
     """Get all categories with metadata"""
     categories = db.query(Category).order_by(Category.display_order).all()
-    return categories
+
+    # Transform categories to handle JSON description field
+    return [
+        CategoryResponse(
+            id=cat.id,
+            title=cat.title,
+            description=cat.description[0] if cat.description and len(cat.description) > 0 else "",
+            icon_name=cat.icon_name,
+            color=cat.color,
+            display_order=cat.display_order
+        )
+        for cat in categories
+    ]
