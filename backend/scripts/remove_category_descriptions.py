@@ -24,3 +24,5 @@ def remove_category_descriptions():
             db.commit()
             print(f"✓ Removed descriptions for category: {category.title}")
     
+if __name__ == "__main__":
+    remove_category_descriptions()
