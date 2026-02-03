@@ -1,6 +1,7 @@
 """Migration script to convert category descriptions and embeddings to arrays"""
 import sys
 import os
+import json
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -85,12 +86,27 @@ def migrate_categories():
             # Convert embedding to array of arrays (one embedding per description)
             emb_array = [emb] if isinstance(emb, list) else [[emb]]
 
-            conn.execute(text("""
-                INSERT INTO categories_new (id, title, description, embedding, icon_name, color, display_order, created_at)
-                SELECT id, title, :desc::json, :emb::json, icon_name, color, display_order, created_at
+            # Get the rest of the category data
+            cat_data = conn.execute(text("""
+                SELECT title, icon_name, color, display_order, created_at
                 FROM categories
                 WHERE id = :cat_id
-            """), {"desc": str(desc_array).replace("'", '"'), "emb": str(emb_array), "cat_id": cat_id})
+            """), {"cat_id": cat_id}).fetchone()
+
+            # Insert with proper JSON encoding
+            conn.execute(text("""
+                INSERT INTO categories_new (id, title, description, embedding, icon_name, color, display_order, created_at)
+                VALUES (:cat_id, :title, :desc::jsonb, :emb::jsonb, :icon_name, :color, :display_order, :created_at)
+            """), {
+                "cat_id": cat_id,
+                "title": cat_data[0],
+                "desc": json.dumps(desc_array),
+                "emb": json.dumps(emb_array),
+                "icon_name": cat_data[1],
+                "color": cat_data[2],
+                "display_order": cat_data[3],
+                "created_at": cat_data[4]
+            })
 
         # Drop old table and rename new one
         conn.execute(text("DROP TABLE categories"))
