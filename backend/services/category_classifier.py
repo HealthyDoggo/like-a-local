@@ -23,15 +23,17 @@ class CategoryClassifier:
         self.categories = db.query(Category).order_by(Category.display_order).all()
         logger.info(f"Loaded {len(self.categories)} categories")
 
-    def classify_tip(self, tip_embedding: List[float]) -> Tuple[str, float]:
+    def classify_tip(self, tip_embedding: List[float], return_details: bool = False) -> Tuple[str, float]:
         """
         Classify tip using cosine similarity against multiple category embeddings.
 
         Args:
             tip_embedding: The embedding vector for the tip
+            return_details: If True, returns (category_id, confidence, best_phrase_idx, all_phrase_sims)
 
         Returns:
-            Tuple of (category_id, confidence_score)
+            Tuple of (category_id, confidence_score) or
+            Tuple of (category_id, confidence_score, best_phrase_idx, phrase_similarities) if return_details=True
         """
         if not self.categories:
             raise ValueError("Categories not loaded. Call load_categories() first.")
@@ -41,38 +43,63 @@ class CategoryClassifier:
 
         # Calculate similarity with each category (taking max across all phrase embeddings)
         similarities = {}
+        best_phrase_indices = {}
+        all_phrase_similarities = {}
+
         for category in self.categories:
             try:
                 # category.embedding is now a list of embedding vectors
                 max_similarity = 0.0
-                for phrase_embedding in category.embedding:
+                best_phrase_idx = 0
+                phrase_sims = []
+
+                for idx, phrase_embedding in enumerate(category.embedding):
                     similarity = self.embedding_service.similarity(
                         tip_embedding,
                         phrase_embedding
                     )
-                    max_similarity = max(max_similarity, similarity)
+                    phrase_sims.append(similarity)
+
+                    if similarity > max_similarity:
+                        max_similarity = similarity
+                        best_phrase_idx = idx
 
                 similarities[category.id] = max_similarity
+                best_phrase_indices[category.id] = best_phrase_idx
+                all_phrase_similarities[category.id] = phrase_sims
             except Exception as e:
                 logger.error(f"Error calculating similarity for category {category.id}: {e}")
                 similarities[category.id] = 0.0
+                best_phrase_indices[category.id] = 0
+                all_phrase_similarities[category.id] = []
 
         # Find category with highest similarity
         if not similarities:
             raise ValueError("No similarities calculated")
 
-        best_category_id = max(similarities.items(), key=lambda x: x[1])
-        return best_category_id
+        best_category_id, best_score = max(similarities.items(), key=lambda x: x[1])
 
-    def classify_batch(self, tips_with_embeddings: List[Tuple[int, List[float]]]) -> List[Tuple[int, str, float]]:
+        if return_details:
+            return (
+                best_category_id,
+                best_score,
+                best_phrase_indices[best_category_id],
+                all_phrase_similarities[best_category_id]
+            )
+
+        return best_category_id, best_score
+
+    def classify_batch(self, tips_with_embeddings: List[Tuple[int, List[float]]], return_details: bool = False) -> List[Tuple]:
         """
         Batch classification for efficiency.
 
         Args:
             tips_with_embeddings: List of (tip_id, embedding) tuples
+            return_details: If True, returns detailed classification info
 
         Returns:
-            List of (tip_id, category_id, confidence_score) tuples
+            List of (tip_id, category_id, confidence_score) tuples or
+            List of (tip_id, category_id, confidence_score, phrase_idx, phrase_sims) if return_details=True
         """
         if not self.categories:
             raise ValueError("Categories not loaded. Call load_categories() first.")
@@ -80,8 +107,13 @@ class CategoryClassifier:
         results = []
         for tip_id, embedding in tips_with_embeddings:
             try:
-                category_id, confidence = self.classify_tip(embedding)
-                results.append((tip_id, category_id, confidence))
+                classification = self.classify_tip(embedding, return_details=return_details)
+                if return_details:
+                    category_id, confidence, phrase_idx, phrase_sims = classification
+                    results.append((tip_id, category_id, confidence, phrase_idx, phrase_sims))
+                else:
+                    category_id, confidence = classification
+                    results.append((tip_id, category_id, confidence))
             except Exception as e:
                 logger.error(f"Error classifying tip {tip_id}: {e}")
                 # Skip tips that fail classification

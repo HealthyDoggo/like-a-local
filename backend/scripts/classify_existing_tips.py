@@ -58,9 +58,14 @@ def classify_existing_tips(batch_size=100):
 
                 if embedding_obj:
                     try:
-                        category_id, confidence = classifier.classify_tip(
-                            embedding_obj.embedding
+                        category_id, confidence, phrase_idx, phrase_sims = classifier.classify_tip(
+                            embedding_obj.embedding,
+                            return_details=True
                         )
+
+                        # Get the category and matching phrase from classifier's loaded categories
+                        category = next((c for c in classifier.categories if c.id == category_id), None)
+                        matching_phrase = category.description[phrase_idx] if category else "unknown"
 
                         # Always mark as processed
                         tip.category_assigned_at = datetime.utcnow()
@@ -69,9 +74,20 @@ def classify_existing_tips(batch_size=100):
                             tip.category_id = category_id
                             tip.category_confidence = confidence
                             classified += 1
+
+                            # Log successful classification with details
+                            logger.info(
+                                f"Tip {tip.id}: '{tip.text[:60]}...' -> "
+                                f"{category_id} (confidence: {confidence:.3f}, "
+                                f"matched phrase: '{matching_phrase}')"
+                            )
                         else:
                             # Log tips with low confidence
-                            logger.debug(f"Tip {tip.id}: confidence {confidence:.3f} too low, not assigning category")
+                            logger.info(
+                                f"Tip {tip.id}: '{tip.text[:60]}...' -> "
+                                f"{category_id} (confidence: {confidence:.3f} too low, "
+                                f"matched phrase: '{matching_phrase}', not assigned)"
+                            )
                     except Exception as e:
                         logger.error(f"Error classifying tip {tip.id}: {e}")
 
