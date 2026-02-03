@@ -63,35 +63,35 @@ export function CityOverviewScreen() {
                 {error ? 'Unable to load categories. View general tips instead:' : 'No categories available yet. View general tips:'}
               </p>
             </div>
-            <div className="overflow-x-auto -mx-5 px-5">
-              <div className="flex gap-4 pb-4">
-                <div>
-                  <CategoryCard
-                    icon={Lightbulb}
-                    title="All Tips"
-                    tipCount={0}
-                    iconColor="teal"
-                    onClick={() => navigate('/tips', { state: { city, country, categoryId: undefined, category: 'All Tips' } })}
-                  />
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <CategoryCard
+                icon={Lightbulb}
+                title="All Tips"
+                tipCount={0}
+                iconColor="teal"
+                onClick={() => navigate('/tips', { state: { city, country, categoryId: undefined, category: 'All Tips' } })}
+              />
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-5 px-5">
-            <div className="flex gap-4 pb-4">
-              {categories.map((category) => (
-                <div key={category.id}>
+          <div className="grid grid-cols-2 gap-4">
+            {categories.map((category) => {
+              try {
+                return (
                   <CategoryCard
+                    key={category.id}
                     icon={category.icon}
                     title={category.title}
                     tipCount={category.tipCount}
                     iconColor={category.color}
                     onClick={() => navigate('/tips', { state: { city, country, categoryId: category.id, category: category.title } })}
                   />
-                </div>
-              ))}
-            </div>
+                );
+              } catch (err) {
+                console.error(`Error rendering category ${category.id}:`, err);
+                return null;
+              }
+            })}
           </div>
         )}
       </div>

@@ -39,8 +39,11 @@ export function useCategories(locationName?: string, locationCountry?: string) {
               country: locationCountry,
             });
 
+            console.log('Location search result:', location);
+
             if (location) {
               categoryCounts = await locationsService.getCategoryCounts(location.id);
+              console.log('Category counts from API:', categoryCounts);
             }
           } catch (err) {
             console.error('Error fetching category counts:', err);
@@ -49,6 +52,9 @@ export function useCategories(locationName?: string, locationCountry?: string) {
         }
 
         if (!cancelled) {
+          console.log('Backend categories:', backendCategories);
+          console.log('Category counts before transform:', categoryCounts);
+
           // Transform backend categories to frontend format
           const transformedCategories = backendCategories
             .map((cat: CategoryResponse) => ({
@@ -60,6 +66,8 @@ export function useCategories(locationName?: string, locationCountry?: string) {
               displayOrder: cat.display_order ?? 999,
             }))
             .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+
+          console.log('Transformed categories with counts:', transformedCategories);
 
           setCategories(transformedCategories);
         }

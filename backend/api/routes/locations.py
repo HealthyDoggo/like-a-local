@@ -144,19 +144,19 @@ def get_category_counts(
     location_id: int,
     db: Session = Depends(get_database)
 ) -> Dict[str, int]:
-    """Get tip counts per category for a location"""
+    """Get promoted tip counts per category for a location"""
     location = db.query(Location).filter(Location.id == location_id).first()
     if not location:
         raise HTTPException(status_code=404, detail="Location not found")
 
+    # Count promoted tips instead of all tips to match what's displayed
     counts = db.query(
-        Tip.category_id,
-        func.count(Tip.id).label('count')
+        TipPromotion.category_id,
+        func.count(TipPromotion.id).label('count')
     ).filter(
-        Tip.location_id == location_id,
-        Tip.status == 'processed',
-        Tip.category_id.isnot(None)
-    ).group_by(Tip.category_id).all()
+        TipPromotion.location_id == location_id,
+        TipPromotion.category_id.isnot(None)
+    ).group_by(TipPromotion.category_id).all()
 
     return {category: count for category, count in counts}
 
