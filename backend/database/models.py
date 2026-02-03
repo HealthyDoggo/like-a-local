@@ -1,21 +1,62 @@
 """SQLAlchemy database models"""
 from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, REAL, Boolean, Index, JSON
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.connection import Base
+
+
+class User(Base):
+    """User model for authentication"""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    email_verified = Column(Boolean, default=False)
+    hashed_password = Column(String(255), nullable=True)  # Null for OAuth users
+
+    # OAuth fields
+    google_id = Column(String(255), unique=True, nullable=True, index=True)
+    auth_provider = Column(String(20), nullable=False)  # 'email' or 'google'
+
+    # Profile
+    full_name = Column(String(255), nullable=True)
+    profile_picture_url = Column(String(500), nullable=True)
+    preferred_language = Column(String(10), default='en')
+
+    # Metadata
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, onupdate=func.now())
+    last_login = Column(TIMESTAMP, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    tips = relationship("Tip", back_populates="user")
+
+
+class RefreshToken(Base):
+    """Refresh token model for JWT refresh"""
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(500), unique=True, nullable=False, index=True)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    revoked = Column(Boolean, default=False)
 
 
 class Location(Base):
     """Location model"""
     __tablename__ = "locations"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     country = Column(String(100), nullable=False)
     latitude = Column(DECIMAL(10, 8), nullable=True)
     longitude = Column(DECIMAL(11, 8), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
-    
+
     __table_args__ = (
         Index('idx_location_name_country', 'name', 'country'),
     )
@@ -30,7 +71,7 @@ class Tip(Base):
     original_language = Column(String(10), nullable=True)
     translated_text = Column(Text, nullable=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
-    user_id = Column(Integer, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for optional auth
     submitted_at = Column(TIMESTAMP, server_default=func.now())
     processed_at = Column(TIMESTAMP, nullable=True)
     status = Column(String(20), default="pending", nullable=False)
@@ -38,6 +79,9 @@ class Tip(Base):
     category_confidence = Column(DECIMAL(4, 3), nullable=True)
     category_assigned_at = Column(TIMESTAMP, nullable=True)
     category_manual = Column(Boolean, default=False, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="tips")
 
     __table_args__ = (
         Index('idx_tip_status', 'status'),

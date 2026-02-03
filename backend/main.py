@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
-from backend.api.routes import tips, locations, jobs, categories
+from backend.api.routes import tips, locations, jobs, categories, auth
 from backend.api.routes.locations import promoted_router
 from backend.database.connection import engine, Base
 
@@ -26,6 +26,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(tips.router)
 app.include_router(locations.router)
 app.include_router(promoted_router)

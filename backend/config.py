@@ -44,6 +44,16 @@ class Settings(BaseSettings):
     similarity_threshold: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.85"))  # Cosine similarity threshold for clustering
     min_mentions: int = int(os.getenv("MIN_MENTIONS", "3"))  # Minimum mentions to promote a tip
 
+    # JWT configuration
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-in-production-use-openssl-rand-base64-32")
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+    refresh_token_expire_days: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+
+    # Google OAuth configuration
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+
     class Config:
         env_file = ".env"
         case_sensitive = False

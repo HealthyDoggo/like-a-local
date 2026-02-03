@@ -6,8 +6,8 @@ from sqlalchemy import and_
 from pydantic import BaseModel, Field
 from datetime import datetime
 
-from backend.database.models import Tip, Location, Embedding, TipTranslation
-from backend.api.dependencies import get_database
+from backend.database.models import Tip, Location, Embedding, TipTranslation, User
+from backend.api.dependencies import get_database, get_current_user_optional, get_current_user
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
 
@@ -43,11 +43,12 @@ class TipResponse(BaseModel):
 
 
 @router.post("", response_model=TipResponse, status_code=201)
-def create_tip(
+async def create_tip(
     tip: TipCreate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_database)
 ):
-    """Submit a new tip"""
+    """Submit a new tip (authentication optional)"""
     # Get or create location
     location_id = None
     if tip.location_name and tip.location_country:
@@ -55,7 +56,7 @@ def create_tip(
             Location.name == tip.location_name,
             Location.country == tip.location_country
         ).first()
-        
+
         if not location:
             location = Location(
                 name=tip.location_name,
@@ -66,14 +67,14 @@ def create_tip(
             db.add(location)
             db.commit()
             db.refresh(location)
-        
+
         location_id = location.id
-    
-    # Create tip
+
+    # Create tip with user_id from authenticated user if available
     db_tip = Tip(
         tip_text=tip.tip_text,
         location_id=location_id,
-        user_id=tip.user_id,
+        user_id=current_user.id if current_user else None,
         status="pending",
         category_id=tip.category_id,
         category_manual=bool(tip.category_id)
@@ -160,6 +161,27 @@ def get_tips(
     return results
 
 
+@router.get("/me", response_model=List[TipResponse])
+async def get_my_tips(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_database)
+):
+    """Get all tips submitted by the authenticated user"""
+    tips = db.query(Tip).filter(Tip.user_id == current_user.id).order_by(Tip.submitted_at.desc()).all()
+
+    results = []
+    for tip in tips:
+        response = TipResponse.model_validate(tip)
+        if tip.location_id:
+            location = db.query(Location).filter(Location.id == tip.location_id).first()
+            if location:
+                response.location_name = location.name
+                response.location_country = location.country
+        results.append(response)
+
+    return results
+
+
 @router.get("/{tip_id}", response_model=TipResponse)
 def get_tip(
     tip_id: int,
@@ -169,13 +191,13 @@ def get_tip(
     tip = db.query(Tip).filter(Tip.id == tip_id).first()
     if not tip:
         raise HTTPException(status_code=404, detail="Tip not found")
-    
+
     response = TipResponse.model_validate(tip)
     if tip.location_id:
         location = db.query(Location).filter(Location.id == tip.location_id).first()
         if location:
             response.location_name = location.name
             response.location_country = location.country
-    
+
     return response
 
