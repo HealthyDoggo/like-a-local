@@ -14,12 +14,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Category definitions with descriptions optimized for semantic similarity
+# Category definitions with multiple description phrases for better semantic matching
 CATEGORIES = [
     {
         "id": "everyday-etiquette",
         "title": "Everyday Etiquette",
-        "description": "Social norms, proper greetings, acceptable gestures, dress codes, polite behavior in public, body language, personal space, eye contact, handshakes, bowing, removing shoes, appropriate clothing for different settings",
+        "descriptions": [
+            "Social norms and proper greetings",
+            "Acceptable gestures and body language",
+            "Dress codes and appropriate clothing for different settings",
+            "Polite behavior in public, personal space, eye contact",
+            "Handshakes, bowing, removing shoes indoors"
+        ],
         "icon_name": "handshake",
         "color": "#4A90E2",
         "display_order": 1
@@ -27,7 +33,14 @@ CATEGORIES = [
     {
         "id": "food-dining",
         "title": "Food & Dining",
-        "description": "Restaurant etiquette, tipping customs, meal timing, table manners, dining protocols, chopstick usage, how to order food, eating with hands, food sharing, paying the bill, breakfast lunch dinner times, cafe culture, street food",
+        "descriptions": [
+            "Restaurant etiquette and tipping customs",
+            "Table manners and dining protocols",
+            "Chopstick usage and eating with hands",
+            "Meal timing, breakfast lunch dinner schedules",
+            "How to order food, paying the bill, food sharing",
+            "Cafe culture and street food"
+        ],
         "icon_name": "utensils",
         "color": "#E94B3C",
         "display_order": 2
@@ -35,7 +48,13 @@ CATEGORIES = [
     {
         "id": "getting-around",
         "title": "Getting Around",
-        "description": "Transportation options, public transit, taxis, ride-sharing, buses, trains, subways, metro, driving, parking, walking, cycling, navigation, maps, getting from place to place, commuting, traffic, road rules",
+        "descriptions": [
+            "Public transit, buses, trains, subways, metro systems",
+            "Taxis and ride-sharing services",
+            "Driving, parking, and road rules",
+            "Walking and cycling in the city",
+            "Navigation, maps, and getting from place to place"
+        ],
         "icon_name": "bus",
         "color": "#F39C12",
         "display_order": 3
@@ -43,7 +62,13 @@ CATEGORIES = [
     {
         "id": "public-spaces",
         "title": "Public Spaces",
-        "description": "Behavior in parks, museums, galleries, religious sites, temples, churches, mosques, libraries, theaters, cinemas, shared spaces, quiet zones, photography rules, entry requirements, respect in sacred places",
+        "descriptions": [
+            "Behavior in parks, museums, and galleries",
+            "Religious sites, temples, churches, mosques",
+            "Libraries, theaters, and cinemas",
+            "Photography rules and entry requirements",
+            "Respect in sacred places and quiet zones"
+        ],
         "icon_name": "landmark",
         "color": "#9B59B6",
         "display_order": 4
@@ -51,7 +76,13 @@ CATEGORIES = [
     {
         "id": "social-interactions",
         "title": "Social Interactions",
-        "description": "Making friends, conversation topics, small talk, meeting locals, dating culture, friendships, social gatherings, parties, networking, interpersonal relationships, talking to strangers, building connections",
+        "descriptions": [
+            "Making friends and meeting locals",
+            "Conversation topics and small talk",
+            "Dating culture and interpersonal relationships",
+            "Social gatherings, parties, and networking",
+            "Talking to strangers and building connections"
+        ],
         "icon_name": "users",
         "color": "#1ABC9C",
         "display_order": 5
@@ -59,7 +90,13 @@ CATEGORIES = [
     {
         "id": "cultural-customs",
         "title": "Cultural Customs",
-        "description": "Holidays, festivals, celebrations, traditional ceremonies, religious practices, cultural events, national traditions, rituals, customs specific to the culture, special occasions, observances, cultural heritage",
+        "descriptions": [
+            "Holidays, festivals, and celebrations",
+            "Traditional ceremonies and rituals",
+            "Religious practices and observances",
+            "National traditions and cultural events",
+            "Cultural heritage and special occasions"
+        ],
         "icon_name": "calendar-star",
         "color": "#E67E22",
         "display_order": 6
@@ -67,7 +104,13 @@ CATEGORIES = [
     {
         "id": "locals-appreciate",
         "title": "Locals Appreciate",
-        "description": "Respectful behaviors, cultural appreciation, learning local language, attempting to speak the language, respecting traditions, being mindful, showing interest in culture, polite gestures locals love, what makes you a good visitor",
+        "descriptions": [
+            "Respectful behaviors and cultural appreciation",
+            "Learning and attempting to speak the local language",
+            "Respecting traditions and being mindful",
+            "Showing interest in local culture",
+            "Polite gestures that locals love"
+        ],
         "icon_name": "heart",
         "color": "#E91E63",
         "display_order": 7
@@ -75,7 +118,13 @@ CATEGORIES = [
     {
         "id": "misunderstandings",
         "title": "Common Misunderstandings",
-        "description": "Tourist mistakes, cultural misinterpretations, things travelers get wrong, common misconceptions, faux pas, embarrassing errors, what not to do, offensive behaviors to avoid, cultural blunders, awkward situations",
+        "descriptions": [
+            "Tourist mistakes and common misconceptions",
+            "Cultural misinterpretations and faux pas",
+            "Things travelers get wrong",
+            "Embarrassing errors and awkward situations",
+            "Offensive behaviors to avoid and cultural blunders"
+        ],
         "icon_name": "alert-triangle",
         "color": "#FF6B6B",
         "display_order": 8
@@ -83,7 +132,13 @@ CATEGORIES = [
     {
         "id": "helpful-tips",
         "title": "Helpful Tips",
-        "description": "Practical advice, safety tips, money matters, currency, ATMs, local secrets, insider knowledge, useful information, things to know, life hacks, smart strategies, bargaining, shopping, SIM cards, WiFi",
+        "descriptions": [
+            "Practical advice and safety tips",
+            "Money matters, currency, and ATMs",
+            "Local secrets and insider knowledge",
+            "Bargaining, shopping, and smart strategies",
+            "SIM cards, WiFi, and staying connected"
+        ],
         "icon_name": "lightbulb",
         "color": "#FFC107",
         "display_order": 9
@@ -106,24 +161,36 @@ def init_categories():
 
         logger.info("Initializing categories...")
 
-        # Generate embeddings for all category descriptions
-        descriptions = [cat["description"] for cat in CATEGORIES]
-        logger.info(f"Generating embeddings for {len(descriptions)} categories...")
-        embeddings = embedding_service.embed_batch(descriptions)
+        # Generate embeddings for all category description phrases
+        all_descriptions = []
+        category_phrase_counts = []
 
-        # Create category records
+        for cat in CATEGORIES:
+            descriptions = cat["descriptions"]
+            all_descriptions.extend(descriptions)
+            category_phrase_counts.append(len(descriptions))
+
+        logger.info(f"Generating embeddings for {len(all_descriptions)} description phrases across {len(CATEGORIES)} categories...")
+        all_embeddings = embedding_service.embed_batch(all_descriptions)
+
+        # Create category records with multiple embeddings
+        embedding_idx = 0
         for i, category_data in enumerate(CATEGORIES):
+            phrase_count = category_phrase_counts[i]
+            category_embeddings = all_embeddings[embedding_idx:embedding_idx + phrase_count]
+            embedding_idx += phrase_count
+
             category = Category(
                 id=category_data["id"],
                 title=category_data["title"],
-                description=category_data["description"],
-                embedding=embeddings[i],
+                description=category_data["descriptions"],  # Now a list
+                embedding=category_embeddings,  # Now a list of embeddings
                 icon_name=category_data["icon_name"],
                 color=category_data["color"],
                 display_order=category_data["display_order"]
             )
             db.add(category)
-            logger.info(f"✓ Added category: {category_data['title']}")
+            logger.info(f"✓ Added category: {category_data['title']} ({phrase_count} phrases)")
 
         db.commit()
         logger.info(f"\n✓ Successfully initialized {len(CATEGORIES)} categories")

@@ -25,7 +25,7 @@ class CategoryClassifier:
 
     def classify_tip(self, tip_embedding: List[float]) -> Tuple[str, float]:
         """
-        Classify tip using cosine similarity.
+        Classify tip using cosine similarity against multiple category embeddings.
 
         Args:
             tip_embedding: The embedding vector for the tip
@@ -39,15 +39,20 @@ class CategoryClassifier:
         if not tip_embedding:
             raise ValueError("Tip embedding cannot be empty")
 
-        # Calculate similarity with each category
+        # Calculate similarity with each category (taking max across all phrase embeddings)
         similarities = {}
         for category in self.categories:
             try:
-                similarity = self.embedding_service.similarity(
-                    tip_embedding,
-                    category.embedding
-                )
-                similarities[category.id] = similarity
+                # category.embedding is now a list of embedding vectors
+                max_similarity = 0.0
+                for phrase_embedding in category.embedding:
+                    similarity = self.embedding_service.similarity(
+                        tip_embedding,
+                        phrase_embedding
+                    )
+                    max_similarity = max(max_similarity, similarity)
+
+                similarities[category.id] = max_similarity
             except Exception as e:
                 logger.error(f"Error calculating similarity for category {category.id}: {e}")
                 similarities[category.id] = 0.0

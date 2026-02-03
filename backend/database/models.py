@@ -1,5 +1,5 @@
 """SQLAlchemy database models"""
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, REAL, Boolean, Index
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, REAL, Boolean, Index, JSON
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from backend.database.connection import Base
@@ -104,8 +104,8 @@ class Category(Base):
 
     id = Column(String(50), primary_key=True)
     title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=False)
-    embedding = Column(ARRAY(REAL), nullable=False)
+    description = Column(JSON, nullable=False)  # Array of description phrases
+    embedding = Column(JSON, nullable=False)  # Array of embedding arrays
     icon_name = Column(String(50), nullable=True)
     color = Column(String(20), nullable=True)
     display_order = Column(Integer, nullable=True)
