@@ -16,6 +16,8 @@ import { SettingsScreen } from '@/app/screens/SettingsScreen';
 import { LanguageSettingsScreen } from '@/app/screens/LanguageSettingsScreen';
 import { SignInScreen } from '@/app/screens/SignInScreen';
 import { SignUpScreen } from '@/app/screens/SignUpScreen';
+import { EmailSignInScreen } from '@/app/screens/EmailSignInScreen';
+import { EmailSignUpScreen } from '@/app/screens/EmailSignUpScreen';
 import { NotFoundScreen } from '@/app/screens/NotFoundScreen';
 
 export const router = createBrowserRouter([
@@ -32,8 +34,16 @@ export const router = createBrowserRouter([
     Component: SignInScreen,
   },
   {
+    path: '/sign-in/email',
+    Component: EmailSignInScreen,
+  },
+  {
     path: '/sign-up',
     Component: SignUpScreen,
+  },
+  {
+    path: '/sign-up/email',
+    Component: EmailSignUpScreen,
   },
   {
     path: '/onboarding/country',

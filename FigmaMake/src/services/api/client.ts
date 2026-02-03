@@ -1,3 +1,5 @@
+import { getAccessToken, refreshAuthToken, clearAuth } from '@/utils/tokenStorage';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://149.86.36.226:8001';
 
 export class ApiError extends Error {
@@ -13,14 +15,17 @@ export class ApiError extends Error {
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, any>;
+  skipAuth?: boolean;
 }
 
 export const apiClient = {
+  baseURL: API_BASE_URL,
+
   async request<T>(
     endpoint: string,
     config: RequestConfig = {}
   ): Promise<T> {
-    const { params, ...fetchConfig } = config;
+    const { params, skipAuth, ...fetchConfig } = config;
 
     let url = `${API_BASE_URL}${endpoint}`;
     if (params) {
@@ -32,13 +37,45 @@ export const apiClient = {
       if (queryString) url += `?${queryString}`;
     }
 
-    const response = await fetch(url, {
+    // Add auth header if token exists (unless skipAuth is true)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(fetchConfig.headers as Record<string, string>),
+    };
+
+    if (!skipAuth) {
+      const token = await getAccessToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
+    let response = await fetch(url, {
       ...fetchConfig,
-      headers: {
-        'Content-Type': 'application/json',
-        ...fetchConfig.headers,
-      },
+      headers,
     });
+
+    // Handle 401 with token refresh
+    if (response.status === 401 && !skipAuth) {
+      const token = await getAccessToken();
+      if (token) {
+        const refreshed = await refreshAuthToken();
+        if (refreshed) {
+          // Retry with new token
+          const newToken = await getAccessToken();
+          if (newToken) {
+            headers['Authorization'] = `Bearer ${newToken}`;
+            response = await fetch(url, {
+              ...fetchConfig,
+              headers,
+            });
+          }
+        } else {
+          await clearAuth();
+          throw new ApiError(401, 'Session expired', null);
+        }
+      }
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
