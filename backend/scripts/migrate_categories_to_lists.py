@@ -96,7 +96,7 @@ def migrate_categories():
             # Insert with proper JSON encoding
             conn.execute(text("""
                 INSERT INTO categories_new (id, title, description, embedding, icon_name, color, display_order, created_at)
-                VALUES (:cat_id, :title, :desc::jsonb, :emb::jsonb, :icon_name, :color, :display_order, :created_at)
+                VALUES (:cat_id, :title, CAST(:desc AS jsonb), CAST(:emb AS jsonb), :icon_name, :color, :display_order, :created_at)
             """), {
                 "cat_id": cat_id,
                 "title": cat_data[0],
