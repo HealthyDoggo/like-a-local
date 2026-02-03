@@ -4,56 +4,32 @@ import { Input } from '@/app/components/Input';
 import { ListItem } from '@/app/components/ListItem';
 import { useNavigate } from 'react-router';
 import { BottomNav } from '@/app/components/BottomNav';
-import { useLocations } from '@/hooks/useLocations';
+import { useCountriesAndCities } from '@/hooks/useCountriesAndCities';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
 
-// Flag emoji mapping for common countries
-const countryFlags: Record<string, string> = {
-  'United States': '🇺🇸',
-  'United Kingdom': '🇬🇧',
-  'France': '🇫🇷',
-  'Germany': '🇩🇪',
-  'Japan': '🇯🇵',
-  'Australia': '🇦🇺',
-  'Canada': '🇨🇦',
-  'Spain': '🇪🇸',
-  'Italy': '🇮🇹',
-  'China': '🇨🇳',
-  'India': '🇮🇳',
-  'Brazil': '🇧🇷',
-  'Mexico': '🇲🇽',
-  'Netherlands': '🇳🇱',
-  'Switzerland': '🇨🇭',
-  'South Korea': '🇰🇷',
-  'Thailand': '🇹🇭',
-  'Singapore': '🇸🇬',
-  'Ireland': '🇮🇪',
-  'Portugal': '🇵🇹',
-};
-
-const getCountryFlag = (country: string): string => {
-  return countryFlags[country] || '🌍';
+// Generate flag image URL from country code
+const getFlagUrl = (countryCode: string): string => {
+  return `https://flagsapi.com/${countryCode.toUpperCase()}/flat/64.png`;
 };
 
 export function VisitCountryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { locations, loading, error, reload } = useLocations();
+  const { data, loading, error, reload } = useCountriesAndCities();
   const { reducedMotion } = useSettings();
 
-  // Extract unique countries from locations
+  // Map countries from API data
   const countries = useMemo(() => {
-    const uniqueCountries = Array.from(
-      new Set(locations.map(loc => loc.country))
-    ).sort();
+    if (!data) return [];
 
-    return uniqueCountries.map(country => ({
-      name: country,
-      flag: getCountryFlag(country),
+    return data.countries.map(country => ({
+      name: country.name,
+      code: country.code,
+      flag: getFlagUrl(country.code),
     }));
-  }, [locations]);
+  }, [data]);
 
   const filteredCountries = countries.filter(country =>
     country.name.toLowerCase().includes(searchQuery.toLowerCase())

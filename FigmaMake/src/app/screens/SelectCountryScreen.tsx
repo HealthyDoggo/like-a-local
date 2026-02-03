@@ -8,53 +8,9 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
 
-// Flag emoji mapping for countries
-const countryFlags: Record<string, string> = {
-  'United States': '🇺🇸',
-  'United Kingdom': '🇬🇧',
-  'France': '🇫🇷',
-  'Germany': '🇩🇪',
-  'Japan': '🇯🇵',
-  'Australia': '🇦🇺',
-  'Canada': '🇨🇦',
-  'Spain': '🇪🇸',
-  'Italy': '🇮🇹',
-  'China': '🇨🇳',
-  'India': '🇮🇳',
-  'Brazil': '🇧🇷',
-  'Mexico': '🇲🇽',
-  'Netherlands': '🇳🇱',
-  'Switzerland': '🇨🇭',
-  'South Korea': '🇰🇷',
-  'Thailand': '🇹🇭',
-  'Singapore': '🇸🇬',
-  'Ireland': '🇮🇪',
-  'Portugal': '🇵🇹',
-  'Greece': '🇬🇷',
-  'Turkey': '🇹🇷',
-  'Argentina': '🇦🇷',
-  'Vietnam': '🇻🇳',
-  'Indonesia': '🇮🇩',
-  'Malaysia': '🇲🇾',
-  'Egypt': '🇪🇬',
-  'Morocco': '🇲🇦',
-  'South Africa': '🇿🇦',
-  'United Arab Emirates': '🇦🇪',
-  'Austria': '🇦🇹',
-  'Czech Republic': '🇨🇿',
-  'Poland': '🇵🇱',
-  'Russia': '🇷🇺',
-  'Sweden': '🇸🇪',
-  'Denmark': '🇩🇰',
-  'Norway': '🇳🇴',
-  'Iceland': '🇮🇸',
-  'Belgium': '🇧🇪',
-  'Croatia': '🇭🇷',
-  'New Zealand': '🇳🇿',
-};
-
-const getCountryFlag = (country: string): string => {
-  return countryFlags[country] || '🌍';
+// Generate flag image URL from country code
+const getFlagUrl = (countryCode: string): string => {
+  return `https://flagsapi.com/${countryCode.toUpperCase()}/flat/64.png`;
 };
 
 export function SelectCountryScreen() {
@@ -78,7 +34,7 @@ export function SelectCountryScreen() {
     return data.countries.map(country => ({
       name: country.name,
       code: country.code,
-      flag: getCountryFlag(country.name),
+      flag: getFlagUrl(country.code),
       cityCount: country.cities.length,
     }));
   }, [data]);

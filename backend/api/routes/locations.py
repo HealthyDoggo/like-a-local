@@ -12,6 +12,55 @@ from backend.api.routes.tips import TipResponse
 
 router = APIRouter(prefix="/api/locations", tags=["locations"])
 
+# ISO 3166-1 alpha-2 country codes mapping
+COUNTRY_CODES = {
+    'United States': 'US',
+    'United Kingdom': 'GB',
+    'France': 'FR',
+    'Germany': 'DE',
+    'Japan': 'JP',
+    'Australia': 'AU',
+    'Canada': 'CA',
+    'Spain': 'ES',
+    'Italy': 'IT',
+    'China': 'CN',
+    'India': 'IN',
+    'Brazil': 'BR',
+    'Mexico': 'MX',
+    'Netherlands': 'NL',
+    'Switzerland': 'CH',
+    'South Korea': 'KR',
+    'Thailand': 'TH',
+    'Singapore': 'SG',
+    'Ireland': 'IE',
+    'Portugal': 'PT',
+    'Greece': 'GR',
+    'Turkey': 'TR',
+    'Argentina': 'AR',
+    'Vietnam': 'VN',
+    'Indonesia': 'ID',
+    'Malaysia': 'MY',
+    'Egypt': 'EG',
+    'Morocco': 'MA',
+    'South Africa': 'ZA',
+    'United Arab Emirates': 'AE',
+    'Austria': 'AT',
+    'Czech Republic': 'CZ',
+    'Poland': 'PL',
+    'Russia': 'RU',
+    'Sweden': 'SE',
+    'Denmark': 'DK',
+    'Norway': 'NO',
+    'Iceland': 'IS',
+    'Belgium': 'BE',
+    'Croatia': 'HR',
+    'New Zealand': 'NZ',
+}
+
+def get_country_code(country_name: str) -> str:
+    """Get ISO country code for a country name, fallback to 'XX' if not found"""
+    return COUNTRY_CODES.get(country_name, 'XX')
+
 
 class LocationResponse(BaseModel):
     """Location response model"""
@@ -100,8 +149,14 @@ def get_countries_and_cities(
     for location in locations:
         if location.country not in country_indices:
             country_indices[location.country] = len(countries)
-            countries.append(CountryInfo(name=location.country, code=location.country, cities=[]))
-        countries[country_indices[location.country]].cities.append(CityInfo(name=location.name, latitude=location.latitude, longitude=location.longitude))
+            countries.append(CountryInfo(
+                name=location.country,
+                code=get_country_code(location.country),
+                cities=[]
+            ))
+        countries[country_indices[location.country]].cities.append(
+            CityInfo(name=location.name, latitude=location.latitude, longitude=location.longitude)
+        )
     return CountriesResponse(countries=countries)
 
 
