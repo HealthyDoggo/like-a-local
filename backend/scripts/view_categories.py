@@ -75,7 +75,7 @@ def view_promotions_by_category():
             ).limit(3).all()
 
             for promo in samples:
-                print(f"  - {promo.text[:80]}... (mentions: {promo.mention_count})")
+                print(f"  - {promo.tip_text[:80]}... (mentions: {promo.mention_count})")
             if samples:
                 print()
 
@@ -90,7 +90,7 @@ def view_promotions_by_category():
             TipPromotion.category_id.is_(None)
         ).limit(5).all()
         for promo in samples:
-            print(f"  - {promo.text[:80]}... (mentions: {promo.mention_count})")
+            print(f"  - {promo.tip_text[:80]}... (mentions: {promo.mention_count})")
 
         print(f"\nTotal: {total_promotions + unclassified} promotions")
 
