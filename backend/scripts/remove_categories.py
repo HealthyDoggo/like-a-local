@@ -18,11 +18,9 @@ def remove_category_descriptions():
     print("Removing category descriptions from the database...")
     
     with SessionLocal() as db:
-        categories = db.query(Category).all()
-        for category in categories:
-            category.description = []
-            db.commit()
-            print(f"✓ Removed descriptions for category: {category.title}")
+        db.query(Category).delete()
+        db.commit()
+        print("✓ Removed all categories from the database")
     
 if __name__ == "__main__":
     remove_category_descriptions()
