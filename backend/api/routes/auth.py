@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from backend.database.connection import get_database
+from backend.api.dependencies import get_database
 from backend.database.models import User
 from backend.api.dependencies import get_current_user
 from backend.services.auth import (
