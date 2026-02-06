@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { SecureStoragePlugin } from '@capacitor-community/secure-storage';
+import type { SecureStoragePluginPlugin } from 'capacitor-secure-storage-plugin';
 
 const KEYS = {
   ACCESS_TOKEN: 'access_token',
@@ -10,10 +10,10 @@ const KEYS = {
 const isNative = Capacitor.isNativePlatform();
 
 // Lazy load SecureStorage only on native platforms
-let SecureStorage: SecureStoragePlugin | null = null;
+let SecureStorage: SecureStoragePluginPlugin | null = null;
 if (isNative) {
-  import('@capacitor-community/secure-storage').then((module) => {
-    SecureStorage = module.SecureStorage;
+  import('capacitor-secure-storage-plugin').then((module) => {
+    SecureStorage = module.SecureStoragePlugin;
   });
 }
 

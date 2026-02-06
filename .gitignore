@@ -46,8 +46,6 @@ bin/
 user_data.json
 
 .env.*
+.env
 !.env.example
-
-
-
-
+*.keystore
