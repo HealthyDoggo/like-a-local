@@ -288,7 +288,7 @@ def git_update():
     Update the PC from the git repository.
     """
     try:
-        git.Repo(backend_path).remotes.origin.pull()
+        git.Repo().remotes.origin.pull()
         return {"status": "git update successful"}
     except Exception as e:
         logger.error(f"Git update error: {e}")
