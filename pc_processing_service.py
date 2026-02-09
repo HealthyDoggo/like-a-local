@@ -10,6 +10,8 @@ The Raspberry Pi sends HTTP requests to this service for processing.
 """
 import logging
 import sys
+import threading
+from contextlib import asynccontextmanager
 from typing import List, Optional, Dict
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +24,7 @@ import uvicorn
 import sys
 import os
 import subprocess
-
+import git
 # Add backend directory to path if not already there
 backend_path = os.path.join(os.path.dirname(__file__), 'backend')
 if backend_path not in sys.path:
@@ -37,11 +39,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_translation_service: Optional[TranslationService] = None
+_embedding_service: Optional[EmbeddingService] = None
+
+RESTART_CODE="75"
+
+def get_translation_service() -> TranslationService:
+    return _translation_service
+
+
+def get_embedding_service() -> EmbeddingService:
+    return _embedding_service
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load models at startup so workers are ready before accepting requests."""
+    global _translation_service, _embedding_service
+    logger.info("Loading models at startup...")
+    _translation_service = TranslationService()
+    _translation_service._load_model()
+    _embedding_service = EmbeddingService()
+    _embedding_service._load_model()
+    logger.info("Models loaded, ready to serve requests")
+    yield
+
+
 # Create FastAPI app
 app = FastAPI(
     title="TravelBuddy PC Processing Service",
     description="ML processing service for translation and embedding",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware (allow requests from Pi)
@@ -52,26 +81,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize services (lazy loading - models load on first use)
-_translation_service = None
-_embedding_service = None
-
-
-def get_translation_service() -> TranslationService:
-    """Get or create translation service instance"""
-    global _translation_service
-    if _translation_service is None:
-        _translation_service = TranslationService()
-    return _translation_service
-
-
-def get_embedding_service() -> EmbeddingService:
-    """Get or create embedding service instance"""
-    global _embedding_service
-    if _embedding_service is None:
-        _embedding_service = EmbeddingService()
-    return _embedding_service
 
 
 # Request/Response models
@@ -272,6 +281,25 @@ def process_batch(request: ProcessBatchRequest):
     except Exception as e:
         logger.error(f"Batch processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/git-update")
+def git_update():
+    """
+    Update the PC from the git repository.
+    """
+    try:
+        git.Repo(backend_path).remotes.origin.pull()
+        return {"status": "git update successful"}
+    except Exception as e:
+        logger.error(f"Git update error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        def close():
+            sys.exit(RESTART_CODE)
+        threading.Timer(1.0, close).start()
+        return {"status": "git update successful", "restart": True}
+
+
 
 @app.post("/shutdown")
 def shutdown():
