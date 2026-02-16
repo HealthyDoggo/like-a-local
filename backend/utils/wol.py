@@ -86,7 +86,7 @@ class WakeOnLAN:
         if self.is_pc_awake():
             logger.info("PC is already awake - skipping wake packet")
             return True
-        
+        print(f"Sending wake packet to {self.mac_address} on port {self.port} to IP address 255.255.255.255")
         # PC is sleeping - send wake packet
         for attempt in range(retries):
             try:
