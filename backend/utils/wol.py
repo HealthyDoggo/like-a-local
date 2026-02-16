@@ -95,7 +95,7 @@ class WakeOnLAN:
                 # Send WOL magic packet: UDP broadcast to MAC address
                 # Packet contains PC's MAC address repeated 16 times
                 # Network adapter recognizes this pattern and wakes the PC
-                send_magic_packet(self.mac_address, ip_address=self.ip_address, port=self.port)
+                send_magic_packet(self.mac_address, ip_address='255.255.255.255', port=self.port)
                 
                 # Wait for PC to boot up (network adapter wakes, OS boots, services start)
                 # This can take 10-30 seconds depending on PC speed
