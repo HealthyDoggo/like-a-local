@@ -80,11 +80,18 @@ def verify_google_token(id_token: str) -> dict:
     Returns user info: {'sub': google_id, 'email': email, 'name': name, 'picture': url}
     """
     try:
-        # Verify the token with Google
+        # Build list of accepted client IDs (web, iOS, Android)
+        accepted_client_ids = [settings.google_client_id]
+        if settings.google_ios_client_id:
+            accepted_client_ids.append(settings.google_ios_client_id)
+        if settings.google_android_client_id:
+            accepted_client_ids.append(settings.google_android_client_id)
+
+        # Verify the token with Google (accepts any of the client IDs)
         idinfo = google_id_token.verify_oauth2_token(
             id_token,
             google_requests.Request(),
-            settings.google_client_id
+            accepted_client_ids
         )
 
         # Verify the issuer
