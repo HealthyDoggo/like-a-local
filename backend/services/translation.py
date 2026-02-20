@@ -142,6 +142,9 @@ class TranslationService:
             return text
         
         try:
+            # Set source language so the tokenizer handles tokens correctly
+            self.tokenizer.src_lang = source_lang_code
+
             # Tokenize
             inputs = self.tokenizer(
                 text,
@@ -150,23 +153,23 @@ class TranslationService:
                 truncation=True,
                 max_length=512
             ).to(self.device)
-            
+
             # Translate
             with torch.no_grad():
                 translated_tokens = self.model.generate(
                     **inputs,
-                    forced_bos_token_id=self.tokenizer.lang_code_to_id[self.target_language],
+                    forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_language),
                     max_length=512
                 )
-            
+
             # Decode
             translated_text = self.tokenizer.batch_decode(
                 translated_tokens,
                 skip_special_tokens=True
             )[0]
-            
+
             return translated_text
-        
+
         except Exception as e:
             logger.error(f"Translation error: {e}")
             # Return original text on error
@@ -191,6 +194,9 @@ class TranslationService:
             return texts
 
         try:
+            # Set source language so the tokenizer handles tokens correctly
+            self.tokenizer.src_lang = source_lang_code
+
             # Tokenize batch
             inputs = self.tokenizer(
                 texts,
@@ -204,7 +210,7 @@ class TranslationService:
             with torch.no_grad():
                 translated_tokens = self.model.generate(
                     **inputs,
-                    forced_bos_token_id=self.tokenizer.lang_code_to_id[self.target_language],
+                    forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_language),
                     max_length=512
                 )
 
@@ -247,6 +253,9 @@ class TranslationService:
         target_lang_code = LANGUAGE_CODES.get(target_language, "eng_Latn")
 
         try:
+            # Set source language so the tokenizer handles tokens correctly
+            self.tokenizer.src_lang = source_lang_code
+
             # Tokenize
             inputs = self.tokenizer(
                 text,
@@ -260,7 +269,7 @@ class TranslationService:
             with torch.no_grad():
                 translated_tokens = self.model.generate(
                     **inputs,
-                    forced_bos_token_id=self.tokenizer.lang_code_to_id[target_lang_code],
+                    forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(target_lang_code),
                     max_length=512
                 )
 
