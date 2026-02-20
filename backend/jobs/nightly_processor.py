@@ -222,41 +222,51 @@ def process_pending_tips(
     db.commit()
 
     # Translate each successfully processed tip into all supported languages
+    # Uses concurrent requests so multiple PC workers run in parallel (one tip per worker)
     logger.info("Generating multi-language translations...")
-    translation_count = 0
-    for tip in pending_tips:
-        if tip.status != "processed":
-            continue
-        # The English text is in translated_text (or original if already English)
-        english_text = tip.translated_text or tip.tip_text
-        other_languages = [lang for lang in settings.supported_languages if lang != "en"]
-        try:
-            translations = processing_client.translate_multi(
-                text=english_text,
-                source_language="en",
-                target_languages=other_languages
-            )
-            # Always store English too
-            translations["en"] = english_text
+    tips_to_translate = [t for t in pending_tips if t.status == "processed"]
+    other_languages = [lang for lang in settings.supported_languages if lang != "en"]
 
-            for lang_code, translated in translations.items():
-                if not translated:
-                    continue
-                existing = db.query(TipTranslation).filter(
-                    TipTranslation.tip_id == tip.id,
-                    TipTranslation.language_code == lang_code
-                ).first()
-                if existing:
-                    existing.translated_text = translated
-                else:
-                    db.add(TipTranslation(
-                        tip_id=tip.id,
-                        language_code=lang_code,
-                        translated_text=translated
-                    ))
-            translation_count += 1
-        except Exception as e:
-            logger.error(f"Multi-language translation error for tip {tip.id}: {e}")
+    def _translate_one(tip: Tip) -> tuple[int, dict]:
+        """Send one translate_multi request to the PC; returns (tip_id, translations)."""
+        english_text = tip.translated_text or tip.tip_text
+        translations = processing_client.translate_multi(
+            text=english_text,
+            source_language="en",
+            target_languages=other_languages,
+        )
+        translations["en"] = english_text
+        return tip.id, translations
+
+    translation_results: dict[int, dict] = {}  # tip_id -> {lang: text}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_translate_one, tip): tip for tip in tips_to_translate}
+        for future in as_completed(futures):
+            tip = futures[future]
+            try:
+                tip_id, translations = future.result()
+                translation_results[tip_id] = translations
+            except Exception as e:
+                logger.error(f"Multi-language translation error for tip {tip.id}: {e}")
+
+    # Write results to DB in the main thread (SQLAlchemy sessions are not thread-safe)
+    translation_count = 0
+    for tip in tips_to_translate:
+        translations = translation_results.get(tip.id)
+        if not translations:
+            continue
+        for lang_code, translated in translations.items():
+            if not translated:
+                continue
+            existing = db.query(TipTranslation).filter(
+                TipTranslation.tip_id == tip.id,
+                TipTranslation.language_code == lang_code
+            ).first()
+            if existing:
+                existing.translated_text = translated
+            else:
+                db.add(TipTranslation(tip_id=tip.id, language_code=lang_code, translated_text=translated))
+        translation_count += 1
 
     db.commit()
     stats["multi_translated"] = translation_count
