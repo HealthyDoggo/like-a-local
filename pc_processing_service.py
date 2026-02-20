@@ -297,8 +297,6 @@ def git_update():
         def close():
             sys.exit(RESTART_CODE)
         threading.Timer(1.0, close).start()
-        return {"status": "git update successful", "restart": True}
-
 
 
 @app.post("/shutdown")
