@@ -75,27 +75,33 @@ def process_batch_concurrent(
             logger.error(f"Batch processing error: {e}")
             return [], 0
 
-    # Process batches concurrently using ThreadPoolExecutor
-    # This sends multiple HTTP requests in parallel to the PC
-    # PC's FastAPI with multiple workers can handle them concurrently
+    # Process batches concurrently using ThreadPoolExecutor.
+    # IMPORTANT: index futures by batch position so results are reassembled in
+    # the original tip order regardless of which batch completes first.
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all batch processing tasks
-        future_to_batch = {
-            executor.submit(process_single_batch, batch): batch
-            for batch in tip_batches
+        future_to_idx = {
+            executor.submit(process_single_batch, batch): i
+            for i, batch in enumerate(tip_batches)
         }
 
-        # Collect results as they complete
-        for future in as_completed(future_to_batch):
-            batch = future_to_batch[future]
+        # Collect into a dict keyed by batch index (as_completed is unordered)
+        batch_results: dict[int, list] = {}
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            batch = tip_batches[idx]
             try:
                 results, translations = future.result()
-                all_results.extend(results)
+                batch_results[idx] = results
                 translated_count += translations
-                logger.info(f"Completed batch of {len(batch)} tips ({translations} translated)")
+                logger.info(f"Completed batch {idx} of {len(batch)} tips ({translations} translated)")
             except Exception as e:
-                logger.error(f"Batch future error: {e}")
+                logger.error(f"Batch future error (batch {idx}): {e}")
+                batch_results[idx] = []
                 error_count += len(batch)
+
+    # Reconstruct in original order so results[i] always maps to tips_batch[i]
+    for idx in range(len(tip_batches)):
+        all_results.extend(batch_results.get(idx, []))
 
     return all_results, translated_count, error_count
 
