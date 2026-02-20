@@ -141,90 +141,25 @@ def process_pending_tips(
         "errors": 0
     }
 
-    # Fetch pending tips from Pi's PostgreSQL database
-    pending_tips = db.query(Tip).filter(Tip.status == "pending").limit(batch_size).all()
-
-    if not pending_tips:
+    # Check there is anything to do before waking the PC
+    first_check = db.query(Tip).filter(Tip.status == "pending").first()
+    if not first_check:
         logger.info("No pending tips to process")
         return stats
 
-    logger.info(f"Processing {len(pending_tips)} pending tips with {max_workers} concurrent workers")
-
-    # Wake PC if needed
+    # Wake PC once before the loop
     if wake_pc:
         wol = get_wol()
         if not wol.wake():
             logger.error("Failed to wake PC")
             return stats
 
-    # Initialize processing client
     processing_client = get_processing_client()
-
-    # Check if PC processing service is available
     if not processing_client.health_check():
         logger.error("PC processing service is not available")
         logger.error(f"Expected service at: {processing_client.api_url}")
         return stats
 
-    # Process tips in batches with concurrent requests
-    results, translated_count, error_count = process_batch_concurrent(
-        pending_tips,
-        processing_client,
-        max_workers=max_workers
-    )
-
-    stats["translated"] = translated_count
-    stats["errors"] = error_count
-
-    # Store results back to database
-    for i, tip in enumerate(pending_tips):
-        if i >= len(results):
-            # Error occurred for this tip
-            tip.status = "error"
-            continue
-
-        try:
-            result = results[i]
-
-            # Store translated text and language
-            tip.translated_text = result.get("translated_text")
-            tip.original_language = result.get("language")
-
-            # Store embedding
-            embedding_vector = result.get("embedding", [])
-            if embedding_vector:
-                existing_embedding = db.query(Embedding).filter(
-                    Embedding.tip_id == tip.id
-                ).first()
-
-                if existing_embedding:
-                    existing_embedding.embedding = embedding_vector
-                else:
-                    embedding = Embedding(
-                        tip_id=tip.id,
-                        embedding=embedding_vector
-                    )
-                    db.add(embedding)
-
-                stats["embedded"] += 1
-
-            # Update tip status
-            tip.status = "processed"
-            tip.processed_at = datetime.utcnow()
-            stats["processed"] += 1
-
-        except Exception as e:
-            logger.error(f"Error storing results for tip {tip.id}: {e}")
-            tip.status = "error"
-            stats["errors"] += 1
-
-    # Commit translation + embedding results
-    db.commit()
-
-    # Translate each successfully processed tip into all supported languages
-    # Uses concurrent requests so multiple PC workers run in parallel (one tip per worker)
-    logger.info("Generating multi-language translations...")
-    tips_to_translate = [t for t in pending_tips if t.status == "processed"]
     other_languages = [lang for lang in settings.supported_languages if lang != "en"]
 
     def _translate_one(tip: Tip) -> tuple[int, dict]:
@@ -238,67 +173,118 @@ def process_pending_tips(
         translations["en"] = english_text
         return tip.id, translations
 
-    translation_results: dict[int, dict] = {}  # tip_id -> {lang: text}
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(_translate_one, tip): tip for tip in tips_to_translate}
-        for future in as_completed(futures):
-            tip = futures[future]
-            try:
-                tip_id, translations = future.result()
-                translation_results[tip_id] = translations
-            except Exception as e:
-                logger.error(f"Multi-language translation error for tip {tip.id}: {e}")
+    # Track every tip processed across all batches for classification at the end
+    all_processed_tips: list[Tip] = []
 
-    # Write results to DB in the main thread (SQLAlchemy sessions are not thread-safe)
-    translation_count = 0
-    for tip in tips_to_translate:
-        translations = translation_results.get(tip.id)
-        if not translations:
-            continue
-        for lang_code, translated in translations.items():
-            if not translated:
+    # Drain the pending queue in chunks of batch_size
+    while True:
+        pending_tips = db.query(Tip).filter(Tip.status == "pending").limit(batch_size).all()
+        if not pending_tips:
+            break
+
+        logger.info(f"Processing batch of {len(pending_tips)} pending tips")
+
+        # --- Translate to English + generate embeddings ---
+        results, translated_count, error_count = process_batch_concurrent(
+            pending_tips,
+            processing_client,
+            max_workers=max_workers
+        )
+
+        stats["translated"] += translated_count
+        stats["errors"] += error_count
+
+        for i, tip in enumerate(pending_tips):
+            if i >= len(results):
+                tip.status = "error"
                 continue
-            existing = db.query(TipTranslation).filter(
-                TipTranslation.tip_id == tip.id,
-                TipTranslation.language_code == lang_code
-            ).first()
-            if existing:
-                existing.translated_text = translated
-            else:
-                db.add(TipTranslation(tip_id=tip.id, language_code=lang_code, translated_text=translated))
-        translation_count += 1
+            try:
+                result = results[i]
+                tip.translated_text = result.get("translated_text")
+                tip.original_language = result.get("language")
 
-    db.commit()
-    stats["multi_translated"] = translation_count
-    logger.info(f"Generated translations for {translation_count} tips")
+                embedding_vector = result.get("embedding", [])
+                if embedding_vector:
+                    existing_embedding = db.query(Embedding).filter(
+                        Embedding.tip_id == tip.id
+                    ).first()
+                    if existing_embedding:
+                        existing_embedding.embedding = embedding_vector
+                    else:
+                        db.add(Embedding(tip_id=tip.id, embedding=embedding_vector))
+                    stats["embedded"] += 1
 
-    # Classify tips by category (after embeddings are stored)
+                tip.status = "processed"
+                tip.processed_at = datetime.utcnow()
+                stats["processed"] += 1
+
+            except Exception as e:
+                logger.error(f"Error storing results for tip {tip.id}: {e}")
+                tip.status = "error"
+                stats["errors"] += 1
+
+        db.commit()
+
+        # --- Multi-language translations (concurrent, one request per tip) ---
+        tips_to_translate = [t for t in pending_tips if t.status == "processed"]
+        logger.info(f"Generating multi-language translations for {len(tips_to_translate)} tips...")
+
+        translation_results: dict[int, dict] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_translate_one, tip): tip for tip in tips_to_translate}
+            for future in as_completed(futures):
+                tip = futures[future]
+                try:
+                    tip_id, translations = future.result()
+                    translation_results[tip_id] = translations
+                except Exception as e:
+                    logger.error(f"Multi-language translation error for tip {tip.id}: {e}")
+
+        translation_count = 0
+        for tip in tips_to_translate:
+            translations = translation_results.get(tip.id)
+            if not translations:
+                continue
+            for lang_code, translated in translations.items():
+                if not translated:
+                    continue
+                existing = db.query(TipTranslation).filter(
+                    TipTranslation.tip_id == tip.id,
+                    TipTranslation.language_code == lang_code
+                ).first()
+                if existing:
+                    existing.translated_text = translated
+                else:
+                    db.add(TipTranslation(tip_id=tip.id, language_code=lang_code, translated_text=translated))
+            translation_count += 1
+
+        db.commit()
+        stats["multi_translated"] = stats.get("multi_translated", 0) + translation_count
+        logger.info(f"Translated {translation_count} tips into {len(other_languages)} languages")
+
+        all_processed_tips.extend(tips_to_translate)
+
+    # --- Classify all tips processed in this run (runs once, after all batches) ---
     logger.info("Classifying tips into categories...")
     try:
         classifier = get_category_classifier()
         classifier.load_categories(db)
 
         classified_count = 0
-        for tip in pending_tips:
-            # Only classify if successfully processed and not manually categorized
-            if tip.status == "processed" and not tip.category_manual:
-                embedding_obj = db.query(Embedding).filter(
-                    Embedding.tip_id == tip.id
-                ).first()
-
-                if embedding_obj:
-                    try:
-                        category_id, confidence = classifier.classify_tip(
-                            embedding_obj.embedding
-                        )
-
-                        if classifier.should_assign_category(confidence):
-                            tip.category_id = category_id
-                            tip.category_confidence = confidence
-                            tip.category_assigned_at = datetime.utcnow()
-                            classified_count += 1
-                    except Exception as e:
-                        logger.error(f"Error classifying tip {tip.id}: {e}")
+        for tip in all_processed_tips:
+            if tip.category_manual:
+                continue
+            embedding_obj = db.query(Embedding).filter(Embedding.tip_id == tip.id).first()
+            if embedding_obj:
+                try:
+                    category_id, confidence = classifier.classify_tip(embedding_obj.embedding)
+                    if classifier.should_assign_category(confidence):
+                        tip.category_id = category_id
+                        tip.category_confidence = confidence
+                        tip.category_assigned_at = datetime.utcnow()
+                        classified_count += 1
+                except Exception as e:
+                    logger.error(f"Error classifying tip {tip.id}: {e}")
 
         db.commit()
         stats["classified"] = classified_count
