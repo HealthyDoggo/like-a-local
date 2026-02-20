@@ -63,6 +63,37 @@ export function usePromotedTips(
   return { tips, loading, error };
 }
 
+export function useMyTips() {
+  const [tips, setTips] = useState<TipResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { language } = useLanguage();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await tipsService.getMyTips(language);
+        if (!cancelled) setTips(data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load your tips');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [language]);
+
+  return { tips, loading, error };
+}
+
 export function useCreateTip() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

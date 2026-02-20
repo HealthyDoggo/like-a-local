@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple
 from sqlalchemy.orm import Session
 from backend.database.connection import SessionLocal
-from backend.database.models import Tip, Embedding
+from backend.database.models import Tip, Embedding, TipTranslation
 from backend.services.processing_client import get_processing_client
 from backend.services.promotion import get_promotion_service
 from backend.services.category_classifier import get_category_classifier
@@ -218,8 +218,49 @@ def process_pending_tips(
             tip.status = "error"
             stats["errors"] += 1
 
-    # Commit all changes
+    # Commit translation + embedding results
     db.commit()
+
+    # Translate each successfully processed tip into all supported languages
+    logger.info("Generating multi-language translations...")
+    translation_count = 0
+    for tip in pending_tips:
+        if tip.status != "processed":
+            continue
+        # The English text is in translated_text (or original if already English)
+        english_text = tip.translated_text or tip.tip_text
+        other_languages = [lang for lang in settings.supported_languages if lang != "en"]
+        try:
+            translations = processing_client.translate_multi(
+                text=english_text,
+                source_language="en",
+                target_languages=other_languages
+            )
+            # Always store English too
+            translations["en"] = english_text
+
+            for lang_code, translated in translations.items():
+                if not translated:
+                    continue
+                existing = db.query(TipTranslation).filter(
+                    TipTranslation.tip_id == tip.id,
+                    TipTranslation.language_code == lang_code
+                ).first()
+                if existing:
+                    existing.translated_text = translated
+                else:
+                    db.add(TipTranslation(
+                        tip_id=tip.id,
+                        language_code=lang_code,
+                        translated_text=translated
+                    ))
+            translation_count += 1
+        except Exception as e:
+            logger.error(f"Multi-language translation error for tip {tip.id}: {e}")
+
+    db.commit()
+    stats["multi_translated"] = translation_count
+    logger.info(f"Generated translations for {translation_count} tips")
 
     # Classify tips by category (after embeddings are stored)
     logger.info("Classifying tips into categories...")

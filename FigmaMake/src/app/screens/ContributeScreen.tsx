@@ -1,83 +1,28 @@
-import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Button } from '@/app/components/Button';
 import { useNavigate } from 'react-router';
-import { MapPin, MessageCircle, Heart, Plus } from 'lucide-react';
-import { tipsService } from '@/services/api';
-import { TipResponse } from '@/types/api.types';
+import { MapPin, MessageCircle, Heart, Plus, CheckCircle, Loader } from 'lucide-react';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
-import { ApiError } from '@/services/api/client';
+import { useMyTips } from '@/hooks/useTips';
 
 export function ContributeScreen() {
   const navigate = useNavigate();
-  const [userTips, setUserTips] = useState<TipResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { reducedMotion } = useSettings();
+  const { tips: userTips, loading, error } = useMyTips();
 
-  useEffect(() => {
-    const loadTips = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const tips = await tipsService.getAll({ status: 'processed', limit: 50 });
-        setUserTips(tips);
-      } catch (err) {
-        console.error('Error loading tips:', err);
-        if (err instanceof ApiError) {
-          if (err.status === 404) {
-            setError('No tips found. Start by adding your first tip!');
-          } else if (err.status >= 500) {
-            setError('Server error. Please try again later.');
-          } else {
-            setError('Failed to load tips. Please try again.');
-          }
-        } else {
-          setError('Network error. Please check your connection.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadTips();
-  }, []);
-
-  const retryLoad = () => {
-    setError(null);
-    setLoading(true);
-    const loadTips = async () => {
-      try {
-        const tips = await tipsService.getAll({ status: 'processed', limit: 50 });
-        setUserTips(tips);
-      } catch (err) {
-        console.error('Error loading tips:', err);
-        setError('Failed to load tips. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadTips();
-  };
+  const uniqueCities = new Set(userTips.map(tip => tip.location_name).filter(Boolean));
+  const processedCount = userTips.filter(t => t.status === 'processed').length;
 
   if (loading) {
     return (
       <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: -10 }}
-            animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-            className="mb-6"
-          >
-            <h1
-              className="text-[24px] leading-[28px] mb-2"
-              style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-            >
-              Your city insights
-            </h1>
-          </motion.div>
+          <h1 className="text-[24px] leading-[28px] mb-6" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
+            Your city insights
+          </h1>
           <LoadingSpinner />
         </div>
         <BottomNav />
@@ -89,27 +34,15 @@ export function ContributeScreen() {
     return (
       <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: -10 }}
-            animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-            className="mb-6"
-          >
-            <h1
-              className="text-[24px] leading-[28px] mb-2"
-              style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-            >
-              Your city insights
-            </h1>
-          </motion.div>
-          <ErrorMessage message={error} onRetry={retryLoad} />
+          <h1 className="text-[24px] leading-[28px] mb-6" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
+            Your city insights
+          </h1>
+          <ErrorMessage message={error} />
         </div>
         <BottomNav />
       </div>
     );
   }
-
-  // Get unique cities count
-  const uniqueCities = new Set(userTips.map(tip => tip.location_name).filter(Boolean));
 
   return (
     <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
@@ -119,10 +52,7 @@ export function ContributeScreen() {
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1
-            className="text-[24px] leading-[28px] mb-2"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-          >
+          <h1 className="text-[24px] leading-[28px] mb-2" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
             Your city insights
           </h1>
           <p className="text-[15px] leading-[22px]" style={{ color: 'var(--app-text-secondary)' }}>
@@ -144,9 +74,7 @@ export function ContributeScreen() {
             <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
               {userTips.length}
             </p>
-            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>
-              Tips shared
-            </p>
+            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>Tips shared</p>
           </div>
 
           <div className="rounded-xl p-4 shadow-sm text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
@@ -156,21 +84,15 @@ export function ContributeScreen() {
             <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
               {uniqueCities.size}
             </p>
-            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>
-              Cities covered
-            </p>
+            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>Cities covered</p>
           </div>
 
           <div className="rounded-xl p-4 shadow-sm text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
             <div className="flex items-center justify-center mb-1">
               <Heart className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
             </div>
-            <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
-              42
-            </p>
-            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>
-              Saved by visitors
-            </p>
+            <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>42</p>
+            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>Saved by visitors</p>
           </div>
         </motion.div>
 
@@ -181,10 +103,17 @@ export function ContributeScreen() {
           transition={reducedMotion ? { duration: 0 } : { delay: 0.2 }}
           className="mb-6"
         >
-          <h2 className="text-[18px] leading-[24px] mb-4" style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
-            Your tips
-          </h2>
-          
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[18px] leading-[24px]" style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
+              Your tips
+            </h2>
+            {userTips.length > 0 && userTips.length !== processedCount && (
+              <span className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>
+                {processedCount}/{userTips.length} live
+              </span>
+            )}
+          </div>
+
           <div className="flex flex-col gap-3">
             {userTips.length === 0 ? (
               <p className="text-center text-[14px]" style={{ color: 'var(--app-text-secondary)' }}>
@@ -207,15 +136,24 @@ export function ContributeScreen() {
                     >
                       {tip.location_name || 'General'}
                     </span>
-                    <span className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>
-                      {new Date(tip.submitted_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {tip.status === 'processed' ? (
+                        <CheckCircle className="w-3.5 h-3.5" style={{ color: '#22c55e' }} />
+                      ) : (
+                        <Loader className="w-3.5 h-3.5" style={{ color: 'var(--app-text-secondary)' }} />
+                      )}
+                      <span className="text-[11px]" style={{ color: tip.status === 'processed' ? '#22c55e' : 'var(--app-text-secondary)' }}>
+                        {tip.status === 'processed' ? 'Live' : 'Pending'}
+                      </span>
+                    </div>
                   </div>
 
                   <p className="text-[14px] leading-[20px]" style={{ color: 'var(--app-text-primary)' }}>
-                    {tip.tip_text.length > 120
-                      ? tip.tip_text.substring(0, 120) + '...'
-                      : tip.tip_text}
+                    {tip.tip_text.length > 120 ? tip.tip_text.substring(0, 120) + '...' : tip.tip_text}
+                  </p>
+
+                  <p className="text-[11px] mt-2" style={{ color: 'var(--app-text-secondary)' }}>
+                    {new Date(tip.submitted_at).toLocaleDateString()}
                   </p>
                 </motion.div>
               ))
@@ -229,8 +167,8 @@ export function ContributeScreen() {
           animate={reducedMotion ? false : { opacity: 1 }}
           transition={reducedMotion ? { duration: 0 } : { delay: 0.4 }}
         >
-          <Button 
-            onClick={() => navigate('/onboarding/country')} 
+          <Button
+            onClick={() => navigate('/onboarding/country')}
             className="w-full flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />

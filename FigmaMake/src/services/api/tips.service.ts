@@ -10,4 +10,8 @@ export const tipsService = {
   async getAll(params?: TipsQueryParams): Promise<TipResponse[]> {
     return apiClient.get<TipResponse[]>(ENDPOINTS.TIPS, params);
   },
+
+  async getMyTips(language?: string): Promise<TipResponse[]> {
+    return apiClient.get<TipResponse[]>(`${ENDPOINTS.TIPS}/me`, language ? { language } : undefined);
+  },
 };

@@ -163,15 +163,29 @@ def get_tips(
 
 @router.get("/me", response_model=List[TipResponse])
 async def get_my_tips(
+    language: str = Query("en", description="Preferred language code (e.g., en, es, fr)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_database)
 ):
-    """Get all tips submitted by the authenticated user"""
-    tips = db.query(Tip).filter(Tip.user_id == current_user.id).order_by(Tip.submitted_at.desc()).all()
+    """Get all tips submitted by the authenticated user, in the requested language."""
+    tips_query = (
+        db.query(Tip, TipTranslation.translated_text.label("preferred_translation"))
+        .outerjoin(
+            TipTranslation,
+            and_(
+                TipTranslation.tip_id == Tip.id,
+                TipTranslation.language_code == language
+            )
+        )
+        .filter(Tip.user_id == current_user.id)
+        .order_by(Tip.submitted_at.desc())
+    )
 
     results = []
-    for tip in tips:
+    for tip, preferred_translation in tips_query.all():
+        tip_text = preferred_translation or tip.translated_text or tip.tip_text
         response = TipResponse.model_validate(tip)
+        response.tip_text = tip_text
         if tip.location_id:
             location = db.query(Location).filter(Location.id == tip.location_id).first()
             if location:

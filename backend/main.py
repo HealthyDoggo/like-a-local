@@ -46,28 +46,37 @@ def health_check():
     return {"status": "healthy"}
 
 
+_LANGUAGE_METADATA = {
+    "en": {"name": "English",    "native_name": "English"},
+    "es": {"name": "Spanish",    "native_name": "Español"},
+    "fr": {"name": "French",     "native_name": "Français"},
+    "de": {"name": "German",     "native_name": "Deutsch"},
+    "it": {"name": "Italian",    "native_name": "Italiano"},
+    "pt": {"name": "Portuguese", "native_name": "Português"},
+    "ru": {"name": "Russian",    "native_name": "Русский"},
+    "ja": {"name": "Japanese",   "native_name": "日本語"},
+    "ko": {"name": "Korean",     "native_name": "한국어"},
+    "zh": {"name": "Chinese",    "native_name": "中文"},
+    "ar": {"name": "Arabic",     "native_name": "العربية"},
+    "hi": {"name": "Hindi",      "native_name": "हिन्दी"},
+    "th": {"name": "Thai",       "native_name": "ภาษาไทย"},
+    "vi": {"name": "Vietnamese", "native_name": "Tiếng Việt"},
+    "id": {"name": "Indonesian", "native_name": "Bahasa Indonesia"},
+}
+
+
 @app.get("/api/languages")
 def get_supported_languages():
     """
     Get list of supported languages for translation.
-
-    Returns:
-        List of language objects with code, English name, and native name
+    Driven by settings.supported_languages so config is the single source of truth.
     """
-    return {
-        "languages": [
-            {"code": "en", "name": "English", "native_name": "English"},
-            {"code": "es", "name": "Spanish", "native_name": "Español"},
-            {"code": "fr", "name": "French", "native_name": "Français"},
-            {"code": "de", "name": "German", "native_name": "Deutsch"},
-            {"code": "pt", "name": "Portuguese", "native_name": "Português"},
-            {"code": "it", "name": "Italian", "native_name": "Italiano"},
-            {"code": "zh", "name": "Chinese", "native_name": "中文"},
-            {"code": "ja", "name": "Japanese", "native_name": "日本語"},
-            {"code": "ar", "name": "Arabic", "native_name": "العربية"},
-            {"code": "hi", "name": "Hindi", "native_name": "हिन्दी"},
-        ]
-    }
+    languages = [
+        {"code": code, **_LANGUAGE_METADATA[code]}
+        for code in settings.supported_languages
+        if code in _LANGUAGE_METADATA
+    ]
+    return {"languages": languages}
 
 
 if __name__ == "__main__":
