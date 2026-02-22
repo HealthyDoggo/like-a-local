@@ -131,7 +131,8 @@ class ProcessingClient:
         text: str,
         source_language: str,
         target_languages: List[str],
-        timeout: int = 300
+        timeout: Optional[int] = None,
+        ensure_awake: bool = False,
     ) -> Dict[str, str]:
         """
         Translate text to multiple target languages.
@@ -140,15 +141,21 @@ class ProcessingClient:
             text: Text to translate
             source_language: ISO 639-1 source language code
             target_languages: List of target language codes
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds. Defaults to 45s per language.
+            ensure_awake: If True, wake the PC before the request. Set False
+                          (default) when the caller has already verified the PC
+                          is up (e.g. the nightly processor loop).
 
         Returns:
             Dict mapping language codes to translated text
         """
-        # Ensure PC is awake before making request
-        if not self._ensure_pc_awake():
+        if ensure_awake and not self._ensure_pc_awake():
             logger.error("Failed to wake PC for translation")
             raise ConnectionError("PC is not reachable")
+
+        # Scale timeout by number of languages so slow NLLB runs don't time out
+        if timeout is None:
+            timeout = max(300, 45 * len(target_languages))
 
         try:
             response = requests.post(

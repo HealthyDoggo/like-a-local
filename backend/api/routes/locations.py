@@ -6,7 +6,8 @@ from sqlalchemy import func
 from pydantic import BaseModel
 from datetime import datetime
 
-from backend.database.models import Location, Tip, TipPromotion
+from sqlalchemy import and_
+from backend.database.models import Location, Tip, TipPromotion, TipTranslation
 from backend.api.dependencies import get_database
 from backend.api.routes.tips import TipResponse
 
@@ -220,6 +221,7 @@ def get_category_counts(
 def get_location_promoted_tips(
     location_id: int,
     category_id: Optional[str] = Query(None, description="Filter by category ID"),
+    language: str = Query("en", description="Preferred language code (e.g., en, es, fr)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of tips to return"),
     db: Session = Depends(get_database)
 ):
@@ -228,18 +230,27 @@ def get_location_promoted_tips(
     if not location:
         raise HTTPException(status_code=404, detail="Location not found")
 
-    query = db.query(TipPromotion).filter(
-        TipPromotion.location_id == location_id
+    query = (
+        db.query(TipPromotion, TipTranslation.translated_text.label("preferred_translation"))
+        .outerjoin(
+            TipTranslation,
+            and_(
+                TipTranslation.tip_id == TipPromotion.source_tip_id,
+                TipTranslation.language_code == language,
+            )
+        )
+        .filter(TipPromotion.location_id == location_id)
     )
 
     if category_id:
         query = query.filter(TipPromotion.category_id == category_id)
 
-    promoted_tips = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
+    rows = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
 
     results = []
-    for tip in promoted_tips:
-        response = PromotedTipResponse.model_validate(tip)
+    for promotion, preferred_translation in rows:
+        response = PromotedTipResponse.model_validate(promotion)
+        response.tip_text = preferred_translation or promotion.tip_text
         response.location_name = location.name
         response.location_country = location.country
         results.append(response)
@@ -256,36 +267,43 @@ def get_promoted_tips_by_location_name(
     location_name: str = Query(..., description="Location name"),
     location_country: str = Query(..., description="Country name"),
     category_id: Optional[str] = Query(None, description="Filter by category ID"),
+    language: str = Query("en", description="Preferred language code (e.g., en, es, fr)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of tips to return"),
     db: Session = Depends(get_database)
 ):
     """
     Get promoted tips by location name and country (convenience endpoint).
-    This combines location search and promoted tips retrieval in one call.
+    Returns tips in the requested language, falling back to English.
     """
-    # Find location
     location = db.query(Location).filter(
         Location.name == location_name,
         Location.country == location_country
     ).first()
 
     if not location:
-        # Return empty list if location not found (not an error - just no tips yet)
         return []
 
-    # Get promoted tips
-    query = db.query(TipPromotion).filter(
-        TipPromotion.location_id == location.id
+    query = (
+        db.query(TipPromotion, TipTranslation.translated_text.label("preferred_translation"))
+        .outerjoin(
+            TipTranslation,
+            and_(
+                TipTranslation.tip_id == TipPromotion.source_tip_id,
+                TipTranslation.language_code == language,
+            )
+        )
+        .filter(TipPromotion.location_id == location.id)
     )
 
     if category_id:
         query = query.filter(TipPromotion.category_id == category_id)
 
-    promoted_tips = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
+    rows = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
 
     results = []
-    for tip in promoted_tips:
-        response = PromotedTipResponse.model_validate(tip)
+    for promotion, preferred_translation in rows:
+        response = PromotedTipResponse.model_validate(promotion)
+        response.tip_text = preferred_translation or promotion.tip_text
         response.location_name = location.name
         response.location_country = location.country
         results.append(response)

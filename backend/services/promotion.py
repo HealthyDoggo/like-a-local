@@ -10,8 +10,6 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Top 10 supported languages
-TOP_10_LANGUAGES = ["en", "es", "fr", "de", "pt", "it", "zh", "ja", "ar", "hi"]
 
 
 class PromotionService:
@@ -50,7 +48,7 @@ class PromotionService:
         source_text = tip.tip_text
 
         # Determine which languages to translate to (exclude source language)
-        target_languages = [lang for lang in TOP_10_LANGUAGES if lang != source_language]
+        target_languages = [lang for lang in settings.supported_languages if lang != source_language]
 
         try:
             # Call PC service for multi-language translation
@@ -239,14 +237,15 @@ class PromotionService:
                                 existing.similarity_score = 0.85
                     else:
                         # Only translate if not skipping (for reclustering, we skip)
-                        if not skip_translation and group_tips:
-                            representative_tip = group_tips[0]
+                        representative_tip = group_tips[0] if group_tips else None
+                        if not skip_translation and representative_tip:
                             self.translate_tip_to_all_languages(representative_tip, db)
 
                         # Create new promotion
                         promotion = TipPromotion(
                             tip_text=canonical_text,
                             location_id=location.id,
+                            source_tip_id=representative_tip.id if representative_tip else None,
                             mention_count=mention_count,
                             similarity_score=0.85,  # Default similarity
                             category_id=most_common_category

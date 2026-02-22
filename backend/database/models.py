@@ -113,6 +113,7 @@ class TipPromotion(Base):
     id = Column(Integer, primary_key=True, index=True)
     tip_text = Column(Text, nullable=False)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    source_tip_id = Column(Integer, ForeignKey("tips.id"), nullable=True)  # Representative tip for translations
     mention_count = Column(Integer, default=1, nullable=False)
     similarity_score = Column(DECIMAL(5, 4), nullable=True)
     promoted_at = Column(TIMESTAMP, server_default=func.now())
