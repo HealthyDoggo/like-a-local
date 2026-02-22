@@ -25,6 +25,9 @@ import sys
 import os
 import subprocess
 import git
+
+repo = git.Repo(os.path.dirname(os.path.abspath(__file__)))
+
 # Add backend directory to path if not already there
 backend_path = os.path.join(os.path.dirname(__file__), 'backend')
 if backend_path not in sys.path:
@@ -288,7 +291,7 @@ def git_update():
     Update the PC from the git repository.
     """
     try:
-        git.Repo().remotes.origin.pull()
+        repo.remotes.origin.pull()
         return {"status": "git update successful"}
     except Exception as e:
         logger.error(f"Git update error: {e}")
