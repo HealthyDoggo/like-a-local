@@ -311,6 +311,18 @@ def shutdown():
         logger.error(f"Shutdown error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
+@app.get("/logs")
+def get_logs():
+    """
+    Get the logs of the PC.
+    """
+    try:
+        with open("wol_run.log", "r") as f:
+            return {"logs": f.read()}
+    except Exception as e:
+        logger.error(f"Logs error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import argparse
