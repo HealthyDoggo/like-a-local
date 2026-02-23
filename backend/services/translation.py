@@ -1,5 +1,6 @@
 """NLLB translation service with proper language detection"""
 import logging
+import traceback
 from typing import List, Optional, Dict
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
@@ -68,6 +69,30 @@ class TranslationService:
             logger.error(f"Failed to load NLLB model: {e}")
             raise
     
+    def _get_forced_bos_token_id(self, nllb_lang_code: str) -> int:
+        """
+        Reliably get forced_bos_token_id for an NLLB language code.
+
+        Works for both NllbTokenizer (slow, has lang_code_to_id) and
+        NllbFastTokenizer (fast, requires convert_tokens_to_ids via added_tokens).
+        Raises ValueError if the code is not in the tokenizer vocabulary.
+        """
+        # Slow tokenizer has lang_code_to_id dict
+        if hasattr(self.tokenizer, 'lang_code_to_id') and nllb_lang_code in self.tokenizer.lang_code_to_id:
+            return self.tokenizer.lang_code_to_id[nllb_lang_code]
+        # Fast tokenizer: language codes are registered as added special tokens
+        token_id = self.tokenizer.convert_tokens_to_ids(nllb_lang_code)
+        if token_id != self.tokenizer.unk_token_id:
+            return token_id
+        # Fallback: check added_tokens_encoder directly
+        if hasattr(self.tokenizer, 'added_tokens_encoder') and nllb_lang_code in self.tokenizer.added_tokens_encoder:
+            return self.tokenizer.added_tokens_encoder[nllb_lang_code]
+        raise ValueError(
+            f"Language token '{nllb_lang_code}' not found in tokenizer vocabulary "
+            f"(convert_tokens_to_ids returned {token_id}, unk_token_id={self.tokenizer.unk_token_id}). "
+            f"Ensure the tokenizer is a valid NLLB tokenizer."
+        )
+
     def detect_language(self, text: str) -> Optional[str]:
         """
         Detect language of text using proper language detection.
@@ -158,7 +183,7 @@ class TranslationService:
             with torch.no_grad():
                 translated_tokens = self.model.generate(
                     **inputs,
-                    forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_language),
+                    forced_bos_token_id=self._get_forced_bos_token_id(self.target_language),
                     max_length=512
                 )
 
@@ -171,7 +196,7 @@ class TranslationService:
             return translated_text
 
         except Exception as e:
-            logger.error(f"Translation error: {e}")
+            logger.error(f"Translation error: {e}\n{traceback.format_exc()}")
             # Return original text on error
             return text
     
@@ -210,7 +235,7 @@ class TranslationService:
             with torch.no_grad():
                 translated_tokens = self.model.generate(
                     **inputs,
-                    forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_language),
+                    forced_bos_token_id=self._get_forced_bos_token_id(self.target_language),
                     max_length=512
                 )
 
@@ -223,7 +248,7 @@ class TranslationService:
             return translated_texts
 
         except Exception as e:
-            logger.error(f"Batch translation error: {e}")
+            logger.error(f"Batch translation error: {e}\n{traceback.format_exc()}")
             # Return original texts on error
             return texts
 
@@ -269,7 +294,7 @@ class TranslationService:
             with torch.no_grad():
                 translated_tokens = self.model.generate(
                     **inputs,
-                    forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(target_lang_code),
+                    forced_bos_token_id=self._get_forced_bos_token_id(target_lang_code),
                     max_length=512
                 )
 
@@ -282,9 +307,11 @@ class TranslationService:
             return translated_text
 
         except Exception as e:
-            logger.error(f"Translation error ({source_language} -> {target_language}): {e}")
-            # Return original text on error
-            return text
+            logger.error(
+                f"Translation error ({source_language} -> {target_language}): {e}\n"
+                f"{traceback.format_exc()}"
+            )
+            raise
 
     def translate_to_multiple_languages(
         self,
@@ -310,9 +337,12 @@ class TranslationService:
             if target_lang == source_language:
                 results[target_lang] = text  # Original text
             else:
-                results[target_lang] = self.translate_to_language(
-                    text, source_language, target_lang
-                )
+                try:
+                    results[target_lang] = self.translate_to_language(
+                        text, source_language, target_lang
+                    )
+                except Exception as e:
+                    logger.error(f"Skipping {source_language} -> {target_lang}: {e}")
 
         return results
 
