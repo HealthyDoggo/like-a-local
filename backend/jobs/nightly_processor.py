@@ -168,17 +168,6 @@ def process_pending_tips(
 
     other_languages = [lang for lang in settings.supported_languages if lang != "en"]
 
-    def _translate_one(tip: Tip) -> tuple[int, dict]:
-        """Send one translate_multi request to the PC; returns (tip_id, translations)."""
-        english_text = tip.translated_text or tip.tip_text
-        translations = processing_client.translate_multi(
-            text=english_text,
-            source_language="en",
-            target_languages=other_languages,
-        )
-        translations["en"] = english_text
-        return tip.id, translations
-
     # Track every tip processed across all batches for classification at the end
     all_processed_tips: list[Tip] = []
 
@@ -231,40 +220,45 @@ def process_pending_tips(
 
         db.commit()
 
-        # --- Multi-language translations (concurrent, one request per tip) ---
+        # --- Multi-language translations (one batched request for all tips) ---
         tips_to_translate = [t for t in pending_tips if t.status == "processed"]
         logger.info(f"Generating multi-language translations for {len(tips_to_translate)} tips...")
 
-        translation_results: dict[int, dict] = {}
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(_translate_one, tip): tip for tip in tips_to_translate}
-            for future in as_completed(futures):
-                tip = futures[future]
-                try:
-                    tip_id, translations = future.result()
-                    translation_results[tip_id] = translations
-                except Exception as e:
-                    logger.error(f"Multi-language translation error for tip {tip.id}: {e}")
-
         translation_count = 0
-        for tip in tips_to_translate:
-            translations = translation_results.get(tip.id)
-            if not translations:
-                continue
-            for lang_code, translated in translations.items():
-                if not translated:
-                    continue
-                existing = db.query(TipTranslation).filter(
-                    TipTranslation.tip_id == tip.id,
-                    TipTranslation.language_code == lang_code
-                ).first()
-                if existing:
-                    existing.translated_text = translated
-                else:
-                    db.add(TipTranslation(tip_id=tip.id, language_code=lang_code, translated_text=translated))
-            translation_count += 1
+        if tips_to_translate:
+            english_texts = [t.translated_text or t.tip_text for t in tips_to_translate]
+            try:
+                # Single request: PC translates all texts to each language with
+                # one batched model.generate() call per language (M calls total
+                # instead of N*M individual calls).
+                batch_translations = processing_client.translate_multi_batch(
+                    texts=english_texts,
+                    source_language="en",
+                    target_languages=other_languages,
+                )
+                # batch_translations[lang_code] = [translated_text_0, ...]
 
-        db.commit()
+                for tip_idx, tip in enumerate(tips_to_translate):
+                    for lang_code, translated_list in batch_translations.items():
+                        if tip_idx >= len(translated_list):
+                            continue
+                        translated = translated_list[tip_idx]
+                        if not translated:
+                            continue
+                        existing = db.query(TipTranslation).filter(
+                            TipTranslation.tip_id == tip.id,
+                            TipTranslation.language_code == lang_code
+                        ).first()
+                        if existing:
+                            existing.translated_text = translated
+                        else:
+                            db.add(TipTranslation(tip_id=tip.id, language_code=lang_code, translated_text=translated))
+                    translation_count += 1
+
+                db.commit()
+            except Exception as e:
+                logger.error(f"Multi-language batch translation error: {e}")
+
         stats["multi_translated"] = stats.get("multi_translated", 0) + translation_count
         logger.info(f"Translated {translation_count} tips into {len(other_languages)} languages")
 

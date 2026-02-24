@@ -129,6 +129,17 @@ class ProcessBatchRequest(BaseModel):
     source_languages: Optional[List[Optional[str]]] = None
 
 
+class TranslateMultiBatchRequest(BaseModel):
+    texts: List[str]
+    source_language: str
+    target_languages: List[str]
+
+
+class TranslateMultiBatchResponse(BaseModel):
+    # translations[lang_code] = list of translated texts, same order as input texts
+    translations: Dict[str, List[str]]
+
+
 class ProcessBatchItem(BaseModel):
     translated_text: str
     embedding: List[float]
@@ -251,39 +262,87 @@ def embed(request: EmbedRequest):
 def process_batch(request: ProcessBatchRequest):
     """
     Process a batch of texts: detect language, translate, and embed.
-    
-    More efficient than individual requests as models are loaded once.
+
+    Groups texts by source language so each language gets a single batched
+    model.generate() call, then embeds all translated texts in one shot.
     """
     try:
         translation_service = get_translation_service()
         embedding_service = get_embedding_service()
-        
-        results = []
-        for i, text in enumerate(request.texts):
-            # Detect language
-            source_lang = None
-            if request.source_languages and i < len(request.source_languages):
-                source_lang = request.source_languages[i]
-            
-            if not source_lang:
-                source_lang = translation_service.detect_language(text)
-            
-            # Translate
-            translated_text = translation_service.translate(text, source_language=source_lang)
-            
-            # Embed
-            embedding_vector = embedding_service.embed(translated_text)
-            
-            results.append(ProcessBatchItem(
-                translated_text=translated_text,
-                embedding=embedding_vector,
-                language=source_lang
-            ))
-        
+
+        texts = request.texts
+        n = len(texts)
+
+        # Detect languages for all texts
+        detected_langs = []
+        for i, text in enumerate(texts):
+            if request.source_languages and i < len(request.source_languages) and request.source_languages[i]:
+                detected_langs.append(request.source_languages[i])
+            else:
+                detected_langs.append(translation_service.detect_language(text))
+
+        # Group texts by source language for batch translation
+        from collections import defaultdict
+        lang_groups: dict = defaultdict(list)  # lang -> [(original_idx, text)]
+        for i, (text, lang) in enumerate(zip(texts, detected_langs)):
+            lang_groups[lang].append((i, text))
+
+        translated_texts = [None] * n
+
+        # One batched translate call per unique source language
+        for lang, group in lang_groups.items():
+            indices = [g[0] for g in group]
+            group_texts = [g[1] for g in group]
+            translated = translation_service.translate_batch(group_texts, source_language=lang)
+            for idx, trans in zip(indices, translated):
+                translated_texts[idx] = trans
+
+        # Embed all translated texts in a single batch call
+        embeddings = embedding_service.embed_batch(translated_texts)
+
+        results = [
+            ProcessBatchItem(
+                translated_text=translated_texts[i],
+                embedding=embeddings[i],
+                language=detected_langs[i],
+            )
+            for i in range(n)
+        ]
+
         return ProcessBatchResponse(results=results)
     except Exception as e:
         logger.error(f"Batch processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/translate-multi-batch", response_model=TranslateMultiBatchResponse)
+def translate_to_multiple_languages_batch(request: TranslateMultiBatchRequest):
+    """
+    Translate a batch of texts to multiple target languages.
+
+    Replaces N concurrent translate-multi calls with a single request.
+    For each target language, all texts are translated in one batched
+    model.generate() call — reducing M*N generate() calls to just M calls
+    (one per target language).
+    """
+    try:
+        translation_service = get_translation_service()
+        translations: Dict[str, List[str]] = {}
+
+        # Always include source language texts as-is
+        translations[request.source_language] = list(request.texts)
+
+        for target_lang in request.target_languages:
+            if target_lang == request.source_language:
+                continue
+            translations[target_lang] = translation_service.translate_batch_to_language(
+                request.texts, request.source_language, target_lang
+            )
+
+        return TranslateMultiBatchResponse(translations=translations)
+    except Exception as e:
+        logger.error(f"Multi-batch translation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/git-update")
 def git_update():

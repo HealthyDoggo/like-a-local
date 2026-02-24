@@ -202,6 +202,37 @@ class ProcessingClient:
             logger.error(f"Embedding request failed: {e}")
             raise
     
+    def translate_multi_batch(
+        self,
+        texts: List[str],
+        source_language: str,
+        target_languages: List[str],
+        timeout: Optional[int] = None,
+    ) -> Dict[str, List[str]]:
+        """
+        Translate a batch of texts to multiple target languages in one request.
+
+        Far more efficient than N individual translate_multi() calls — the PC
+        processes each target language with a single batched generate() call.
+
+        Returns:
+            Dict mapping language codes to list of translated texts (same order as input)
+        """
+        if timeout is None:
+            timeout = max(600, 60 * len(target_languages))
+
+        response = requests.post(
+            f"{self.api_url}/translate-multi-batch",
+            json={
+                "texts": texts,
+                "source_language": source_language,
+                "target_languages": target_languages,
+            },
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        return response.json().get("translations", {})
+
     def process_batch(
         self,
         texts: List[str],

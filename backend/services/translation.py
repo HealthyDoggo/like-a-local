@@ -313,6 +313,56 @@ class TranslationService:
             )
             raise
 
+    def translate_batch_to_language(
+        self,
+        texts: List[str],
+        source_language: str,
+        target_language: str,
+    ) -> List[str]:
+        """
+        Translate a batch of texts from source_language to target_language.
+
+        Like translate_batch() but supports an arbitrary target language instead
+        of always translating to self.target_language (English).
+        """
+        if not texts:
+            return []
+
+        if source_language == target_language:
+            return list(texts)
+
+        self._load_model()
+
+        source_lang_code = LANGUAGE_CODES.get(source_language, "eng_Latn")
+        target_lang_code = LANGUAGE_CODES.get(target_language, "eng_Latn")
+
+        try:
+            self.tokenizer.src_lang = source_lang_code
+
+            inputs = self.tokenizer(
+                texts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=512
+            ).to(self.device)
+
+            with torch.no_grad():
+                translated_tokens = self.model.generate(
+                    **inputs,
+                    forced_bos_token_id=self._get_forced_bos_token_id(target_lang_code),
+                    max_length=512
+                )
+
+            return self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
+
+        except Exception as e:
+            logger.error(
+                f"Batch translation error ({source_language} -> {target_language}): {e}\n"
+                f"{traceback.format_exc()}"
+            )
+            return list(texts)
+
     def translate_to_multiple_languages(
         self,
         text: str,
