@@ -63,7 +63,7 @@ export function CityOverviewScreen() {
                 {error ? 'Unable to load categories. View general tips instead:' : 'No categories available yet. View general tips:'}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-2">
               <CategoryCard
                 icon={Lightbulb}
                 title="All Tips"
@@ -74,7 +74,7 @@ export function CityOverviewScreen() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-2">
             {categories.map((category) => {
               try {
                 return (

@@ -28,7 +28,7 @@ export function CategoryCard({ icon: Icon, title, tipCount, onClick, iconColor =
           <Icon className="w-4 h-4" style={{ color: colorValue }} />
         </div>
         <div className="flex flex-col items-start min-w-0">
-          <h3 className="text-sm font-semibold text-left w-full truncate" style={{ color: 'var(--app-text-primary)' }}>
+          <h3 className="text-sm font-semibold text-left w-full" style={{ color: 'var(--app-text-primary)' }}>
             {title}
           </h3>
           <p className="text-xs text-left" style={{ color: 'var(--app-text-secondary)' }}>
