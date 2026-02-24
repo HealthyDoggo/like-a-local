@@ -114,9 +114,14 @@ class WakeOnLAN:
                 logger.error(f"Wake-on-LAN error (attempt {attempt + 1}): {e}")
                 if attempt < retries - 1:
                     time.sleep(retry_delay)
-        
-        logger.error("Failed to wake PC after all retries")
-        return False
+        logger.info("Waiting 15 seconds just in case...")
+        time.sleep(15)
+        if self.is_pc_awake(timeout=30):
+            logger.info("PC successfully awakened and is now reachable")
+            return True
+        else:
+            logger.error("Failed to wake PC after all retries")
+            return False
     
     def sleep_pc(self) -> bool:
         """
