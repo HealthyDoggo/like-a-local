@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -6,12 +6,19 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function EmailSignInScreen() {
   const navigate = useNavigate();
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Navigate once React has applied the auth state update
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home', { replace: true });
+    }
+  }, [isAuthenticated]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +27,7 @@ export function EmailSignInScreen() {
 
     try {
       await signInWithEmail(email, password);
-      navigate('/home');
+      // Navigation is handled by the isAuthenticated useEffect above
     } catch (err: any) {
       setError(err.data?.detail || err.message || 'Sign-in failed. Please check your credentials.');
     } finally {

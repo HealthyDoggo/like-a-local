@@ -15,20 +15,20 @@ export function CategoryCard({ icon: Icon, title, tipCount, onClick, iconColor =
   return (
     <motion.button
       onClick={onClick}
-      className="w-full rounded-2xl p-4 shadow-sm"
+      className="w-full rounded-2xl px-3 py-2.5 shadow-sm"
       style={{ backgroundColor: 'var(--app-surface)' }}
       whileTap={{ scale: 0.95 }}
       whileHover={{ boxShadow: '0 8px 20px rgba(0, 0, 0, 0.1)' }}
     >
-      <div className="flex flex-col items-start gap-3">
+      <div className="flex flex-row items-center gap-2.5">
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center"
+          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
           style={{ backgroundColor: `${colorValue}20` }}
         >
-          <Icon className="w-6 h-6" style={{ color: colorValue }} />
+          <Icon className="w-4 h-4" style={{ color: colorValue }} />
         </div>
-        <div className="flex flex-col items-start w-full">
-          <h3 className="text-base font-semibold text-left w-full break-words overflow-hidden" style={{ color: 'var(--app-text-primary)' }}>
+        <div className="flex flex-col items-start min-w-0">
+          <h3 className="text-sm font-semibold text-left w-full truncate" style={{ color: 'var(--app-text-primary)' }}>
             {title}
           </h3>
           <p className="text-xs text-left" style={{ color: 'var(--app-text-secondary)' }}>

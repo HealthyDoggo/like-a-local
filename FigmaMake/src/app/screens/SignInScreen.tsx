@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Mail, Apple } from 'lucide-react';
@@ -6,9 +6,16 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function SignInScreen() {
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Navigate once React has applied the auth state update
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home', { replace: true });
+    }
+  }, [isAuthenticated]);
 
   const handleSignIn = async (method: 'email' | 'apple' | 'google') => {
     if (method === 'email') {
@@ -27,7 +34,7 @@ export function SignInScreen() {
 
       try {
         await signInWithGoogle();
-        navigate('/home');
+        // Navigation is handled by the isAuthenticated useEffect above
       } catch (err: any) {
         setError(err.message || 'Google sign-in failed');
       } finally {
