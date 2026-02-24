@@ -320,7 +320,7 @@ def get_logs():
     Get the logs of the PC.
     """
     try:
-        with open("wol_run.log", "r") as f:
+        with open(f"{repo.working_dir}/wol_run.log", "r") as f:
             return {"logs": f.read()}
     except Exception as e:
         logger.error(f"Logs error: {e}")
