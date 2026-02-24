@@ -50,10 +50,23 @@ export const apiClient = {
       }
     }
 
-    let response = await fetch(url, {
-      ...fetchConfig,
-      headers,
-    });
+    console.log('Making API request to:', url);
+    console.log('Request headers:', headers);
+    console.log('Request body:', fetchConfig.body);
+
+    let response;
+    try {
+      response = await fetch(url, {
+        ...fetchConfig,
+        headers,
+      });
+      console.log('Response status:', response.status, response.statusText);
+    } catch (error: any) {
+      console.error('Network error during fetch:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      throw new Error(`Network error: ${error.message || 'Failed to connect to server'}`);
+    }
 
     // Handle 401 with token refresh
     if (response.status === 401 && !skipAuth) {

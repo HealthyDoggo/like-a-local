@@ -3,15 +3,27 @@ import { AuthResponse, EmailSignUpData, EmailSignInData, User } from '@/types/au
 
 export const authService = {
   async signUpWithEmail(data: EmailSignUpData): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/api/auth/signup/email', data);
+    return apiClient.request<AuthResponse>('/api/auth/signup/email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      skipAuth: true,
+    });
   },
 
   async signInWithEmail(data: EmailSignInData): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/api/auth/signin/email', data);
+    return apiClient.request<AuthResponse>('/api/auth/signin/email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      skipAuth: true,
+    });
   },
 
   async signInWithGoogle(idToken: string): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/api/auth/google', { id_token: idToken });
+    return apiClient.request<AuthResponse>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ id_token: idToken }),
+      skipAuth: true,
+    });
   },
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {

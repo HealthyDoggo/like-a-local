@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.likealocal.app',
   appName: 'Like a Local',
   webDir: 'dist',
+  ios: {
+    scheme: 'App',
+  },
   server: {
     androidScheme: 'https',
     cleartext: true, // Allow HTTP for development API
@@ -15,10 +18,12 @@ const config: CapacitorConfig = {
       backgroundColor: '#FFFFFF',
       showSpinner: false,
     },
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      serverClientId: process.env.VITE_GOOGLE_WEB_CLIENT_ID || '',
-      forceCodeForRefreshToken: true,
+    SocialLogin: {
+      google: {
+        webClientId: process.env.VITE_GOOGLE_WEB_CLIENT_ID || '',
+        iOSClientId: process.env.VITE_GOOGLE_IOS_CLIENT_ID || '',
+        androidClientId: process.env.VITE_GOOGLE_ANDROID_CLIENT_ID || '',
+      },
     },
   },
 };

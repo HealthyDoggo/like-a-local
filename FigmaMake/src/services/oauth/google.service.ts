@@ -1,4 +1,4 @@
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 import { Capacitor } from '@capacitor/core';
 
 const WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID || '';
@@ -21,10 +21,12 @@ export async function initGoogleAuth(): Promise<void> {
       clientId = ANDROID_CLIENT_ID || WEB_CLIENT_ID;
     }
 
-    await GoogleAuth.initialize({
-      clientId,
-      scopes: ['profile', 'email'],
-      grantOfflineAccess: true,
+    await SocialLogin.initialize({
+      google: {
+        webClientId: clientId,
+        iOSClientId: IOS_CLIENT_ID,
+        androidClientId: ANDROID_CLIENT_ID,
+      }
     });
 
     initialized = true;
@@ -40,11 +42,29 @@ export async function signInWithGoogle(): Promise<string> {
   }
 
   try {
-    const result = await GoogleAuth.signIn();
-    if (!result.authentication?.idToken) {
-      throw new Error('No ID token received from Google');
+    const result = await SocialLogin.login({
+      provider: 'google',
+      options: {
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      }
+    });
+
+    console.log('Full Google result:', JSON.stringify(result, null, 2));
+
+    // Check for ID token in various possible locations
+    const token = result.result?.idToken
+      || result.result?.authentication?.idToken
+      || result.result?.serverAuthCode
+      || result.result?.accessToken?.token;
+
+    if (!token) {
+      console.error('No token found in result');
+      throw new Error('No token received from Google');
     }
-    return result.authentication.idToken;
+
+    console.log('Using token type:', token.startsWith('ya29') ? 'access_token' : 'id_token');
+    return token;
   } catch (error) {
     console.error('Google sign-in failed:', error);
     throw error;
@@ -53,7 +73,7 @@ export async function signInWithGoogle(): Promise<string> {
 
 export async function signOutGoogle(): Promise<void> {
   try {
-    await GoogleAuth.signOut();
+    await SocialLogin.logout({ provider: 'google' });
   } catch (error) {
     console.error('Google sign-out failed:', error);
   }

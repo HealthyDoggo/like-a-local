@@ -84,13 +84,21 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 
   const signInWithGoogle = async () => {
     try {
+      console.log('Step 1: Getting ID token from Google...');
       const idToken = await googleSignIn();
+      console.log('Step 2: Got ID token, calling backend...');
       const response = await authService.signInWithGoogle(idToken);
+      console.log('Step 3: Backend response received:', response);
       await setTokens(response.access_token, response.refresh_token);
       await setUserData(JSON.stringify(response.user));
       setUser(response.user);
-    } catch (error) {
-      console.error('Google sign-in failed:', error);
+      console.log('Step 4: Sign-in complete!');
+    } catch (error: any) {
+      console.error('Google sign-in failed at step:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      if (error.response) {
+        console.error('Backend error response:', error.response);
+      }
       throw error;
     }
   };
