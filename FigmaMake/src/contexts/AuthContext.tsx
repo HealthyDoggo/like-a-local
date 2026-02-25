@@ -37,6 +37,25 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 
   const initializeAuth = async () => {
     try {
+      // Check for Google OAuth redirect callback (when popup is blocked, browser uses redirect flow)
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const idToken = hashParams.get('id_token');
+        const iss = hashParams.get('iss');
+
+        if (idToken && iss?.includes('accounts.google.com')) {
+          // Clear the hash immediately so it's not processed again on re-render
+          window.history.replaceState(null, '', window.location.pathname);
+
+          const response = await authService.signInWithGoogle(idToken);
+          await setTokens(response.access_token, response.refresh_token);
+          await setUserData(JSON.stringify(response.user));
+          setUser(response.user);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const token = await getAccessToken();
       if (token) {
         // Try to load user data from storage

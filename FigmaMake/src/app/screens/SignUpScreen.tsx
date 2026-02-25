@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Mail, Apple, Globe } from 'lucide-react';
@@ -8,9 +8,15 @@ import { useAuth } from '@/contexts/AuthContext';
 export function SignUpScreen() {
   const navigate = useNavigate();
   const { language, setLanguage, availableLanguages } = useLanguage();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/intent', { replace: true });
+    }
+  }, [isAuthenticated]);
 
   const handleSignUp = async (method: 'email' | 'apple' | 'google') => {
     if (method === 'email') {
@@ -31,7 +37,8 @@ export function SignUpScreen() {
         await signInWithGoogle();
         navigate('/intent');
       } catch (err: any) {
-        setError(err.message || 'Google sign-up failed');
+        const detail = err.data?.detail || err.message || 'Google sign-up failed';
+        setError(detail);
       } finally {
         setIsLoading(false);
       }

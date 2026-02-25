@@ -36,7 +36,8 @@ export function SignInScreen() {
         await signInWithGoogle();
         // Navigation is handled by the isAuthenticated useEffect above
       } catch (err: any) {
-        setError(err.message || 'Google sign-in failed');
+        const detail = err.data?.detail || err.message || 'Google sign-in failed';
+        setError(detail);
       } finally {
         setIsLoading(false);
       }
