@@ -311,9 +311,11 @@ def nightly_job(wake_pc: bool = True, promote: bool = True, sleep_pc: bool = Fal
         # This wakes PC if needed, processes tips, stores results back to Pi's DB
         stats = process_pending_tips(db, wake_pc=wake_pc)
         
-        # Run promotion if requested
-        # This runs entirely on Pi using embeddings already in database
-        if promote:
+        # Run promotion only when tips were actually processed this run.
+        # If nothing was processed, promotion results cannot have changed,
+        # and running it would do O(N²) similarity work across all locations
+        # for no benefit. Use the /api/jobs/promote endpoint to force a run.
+        if promote and stats.get("processed", 0) > 0:
             promoted_count = run_promotion(db)
             stats["promoted"] = promoted_count
         
