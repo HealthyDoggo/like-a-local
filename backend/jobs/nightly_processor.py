@@ -151,20 +151,20 @@ def process_pending_tips(
     first_check = db.query(Tip).filter(Tip.status == "pending").first()
     if not first_check:
         logger.info("No pending tips to process")
-        return stats
+        return stats, []
 
     # Wake PC once before the loop
     if wake_pc:
         wol = get_wol()
         if not wol.wake():
             logger.error("Failed to wake PC")
-            return stats
+            return stats, []
 
     processing_client = get_processing_client()
     if not processing_client.health_check():
         logger.error("PC processing service is not available")
         logger.error(f"Expected service at: {processing_client.api_url}")
-        return stats
+        return stats, []
 
     # Track every tip processed across all batches for classification at the end
     all_processed_tips: list[Tip] = []
