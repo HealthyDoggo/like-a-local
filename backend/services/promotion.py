@@ -93,27 +93,170 @@ class PromotionService:
             logger.error(f"Batch translation of promoted tips failed: {e}")
             db.rollback()
     
-    def promote_tips(self, db: Session, skip_translation: bool = False) -> List[TipPromotion]:
+    def promote_tips(
+        self,
+        db: Session,
+        new_tips: List[Tip] = None,
+        skip_translation: bool = False,
+    ) -> List[TipPromotion]:
         """
         Promote tips that are mentioned frequently by locals.
 
         Args:
             db: Database session
-            skip_translation: If True, skip translating tips (useful for reclustering)
+            new_tips: Tips processed in the current nightly run. When provided,
+                      only these tips are compared against existing promotions
+                      (incremental mode — O(Q×P) instead of O(N²)). Pass None
+                      to force a full recluster of all tips at all locations,
+                      e.g. after a similarity threshold change.
+            skip_translation: If True, skip translating newly promoted tips.
 
         Returns:
-            List of promoted tips
+            List of newly created TipPromotion records.
+        """
+        if new_tips is not None:
+            return self._promote_incremental(db, new_tips, skip_translation)
+        return self._promote_full_recluster(db, skip_translation)
+
+    # ------------------------------------------------------------------
+    # Incremental mode — called from the nightly job
+    # ------------------------------------------------------------------
+
+    def _promote_incremental(
+        self,
+        db: Session,
+        new_tips: List[Tip],
+        skip_translation: bool,
+    ) -> List[TipPromotion]:
+        """
+        Compare each newly processed tip against existing promotions.
+
+        For each new tip:
+        - If similar to an existing promotion → increment its mention_count.
+        - Otherwise → group unmatched new tips with each other; create a
+          promotion if the group meets min_mentions.
+
+        Complexity: O(Q×P) per location, where Q = new tips and P = existing
+        promotions — far cheaper than the O(N²) full recluster.
+        """
+        from collections import defaultdict
+
+        promoted = []
+        new_representative_tips: List[Tip] = []
+        threshold = settings.similarity_threshold
+
+        # Group new tips by location; skip tips with no location
+        by_location: Dict[int, List[Tip]] = defaultdict(list)
+        for tip in new_tips:
+            if tip.location_id:
+                by_location[tip.location_id].append(tip)
+        if not by_location:
+            return promoted
+
+        # Fetch embeddings for all new tips in one query
+        new_tip_ids = [t.id for t in new_tips if t.location_id]
+        new_emb_rows = db.query(Embedding).filter(Embedding.tip_id.in_(new_tip_ids)).all()
+        new_tip_vecs: Dict[int, list] = {e.tip_id: e.embedding for e in new_emb_rows}
+
+        for location_id, location_new_tips in by_location.items():
+            # Load existing promotions with their source embeddings in one JOIN
+            promo_rows = (
+                db.query(TipPromotion, Embedding)
+                .outerjoin(Embedding, Embedding.tip_id == TipPromotion.source_tip_id)
+                .filter(TipPromotion.location_id == location_id)
+                .all()
+            )
+            existing_promotions = [p for p, _ in promo_rows]
+            promo_vecs: Dict[int, list] = {p.id: e.embedding for p, e in promo_rows if e}
+
+            unmatched: List[Tip] = []
+
+            for tip in location_new_tips:
+                tip_vec = new_tip_vecs.get(tip.id)
+                if not tip_vec:
+                    continue
+
+                # Find the most similar existing promotion
+                best_promo, best_sim = None, -1.0
+                for promo in existing_promotions:
+                    promo_vec = promo_vecs.get(promo.id)
+                    if not promo_vec:
+                        continue
+                    sim = self.embedding_service.similarity(tip_vec, promo_vec)
+                    if sim >= threshold and sim > best_sim:
+                        best_sim, best_promo = sim, promo
+
+                if best_promo:
+                    best_promo.mention_count += 1
+                    if tip.category_id and not best_promo.category_id:
+                        best_promo.category_id = tip.category_id
+                else:
+                    unmatched.append(tip)
+
+            # Group unmatched new tips with each other to catch brand-new clusters
+            unmatched_seen: set = set()
+            for tip in unmatched:
+                if tip.id in unmatched_seen:
+                    continue
+                tip_vec = new_tip_vecs.get(tip.id)
+                if not tip_vec:
+                    continue
+
+                similar = [
+                    other for other in unmatched
+                    if other.id != tip.id
+                    and other.id not in unmatched_seen
+                    and new_tip_vecs.get(other.id)
+                    and self.embedding_service.similarity(tip_vec, new_tip_vecs[other.id]) >= threshold
+                ]
+                group = [tip] + similar
+                for t in group:
+                    unmatched_seen.add(t.id)
+
+                if len(group) >= settings.min_mentions:
+                    representative = group[0]
+                    if not skip_translation:
+                        new_representative_tips.append(representative)
+                    category_counts: Dict[int, int] = {}
+                    for t in group:
+                        if t.category_id:
+                            category_counts[t.category_id] = category_counts.get(t.category_id, 0) + 1
+                    promotion = TipPromotion(
+                        tip_text=representative.translated_text or representative.tip_text,
+                        location_id=location_id,
+                        source_tip_id=representative.id,
+                        mention_count=len(group),
+                        similarity_score=0.85,
+                        category_id=max(category_counts, key=category_counts.get) if category_counts else None,
+                    )
+                    db.add(promotion)
+                    promoted.append(promotion)
+
+        db.commit()
+        if new_representative_tips:
+            self._batch_translate_promoted_tips(new_representative_tips, db)
+        return promoted
+
+    # ------------------------------------------------------------------
+    # Full recluster — called from /api/jobs/promote
+    # ------------------------------------------------------------------
+
+    def _promote_full_recluster(
+        self,
+        db: Session,
+        skip_translation: bool,
+    ) -> List[TipPromotion]:
+        """
+        Re-cluster all processed tips at every location from scratch.
+
+        Use this after changing the similarity threshold or to repair state.
+        Complexity: O(N²) per location.
         """
         promoted = []
         new_representative_tips: List[Tip] = []
-
         threshold = settings.similarity_threshold
-        locations = db.query(Location).all()
 
-        for location in locations:
-            # Load all processed tips with their embeddings in one JOIN query.
-            # This avoids re-embedding text that is already stored and eliminates
-            # the N² per-tip embedding DB queries from the old find_similar_tips loop.
+        for location in db.query(Location).all():
             rows = (
                 db.query(Tip, Embedding)
                 .join(Embedding, Embedding.tip_id == Tip.id)
@@ -126,83 +269,69 @@ class PromotionService:
             tips = [tip for tip, _ in rows]
             embedding_cache: Dict[int, list] = {tip.id: emb.embedding for tip, emb in rows}
 
-            # Group similar tips using cached embeddings (no model calls)
             processed_ids: set = set()
             tip_groups: Dict[str, List[Tip]] = {}
 
             for tip in tips:
                 if tip.id in processed_ids:
                     continue
-
                 tip_vec = embedding_cache[tip.id]
                 canonical_text = tip.translated_text or tip.tip_text
-
                 similar = [
                     other for other in tips
                     if other.id != tip.id
                     and other.id not in processed_ids
                     and self.embedding_service.similarity(tip_vec, embedding_cache[other.id]) >= threshold
                 ]
-
                 group_tips = [tip] + similar
                 tip_groups[canonical_text] = group_tips
                 for t in group_tips:
                     processed_ids.add(t.id)
 
-            # Promote groups with enough mentions
             for canonical_text, group_tips in tip_groups.items():
                 mention_count = len(group_tips)
+                if mention_count < settings.min_mentions:
+                    continue
 
-                if mention_count >= settings.min_mentions:
-                    category_counts: Dict[int, int] = {}
-                    for t in group_tips:
-                        if t.category_id:
-                            category_counts[t.category_id] = category_counts.get(t.category_id, 0) + 1
+                category_counts: Dict[int, int] = {}
+                for t in group_tips:
+                    if t.category_id:
+                        category_counts[t.category_id] = category_counts.get(t.category_id, 0) + 1
+                most_common_category = max(category_counts, key=category_counts.get) if category_counts else None
 
-                    most_common_category = (
-                        max(category_counts.items(), key=lambda x: x[1])[0]
-                        if category_counts else None
+                existing = db.query(TipPromotion).filter(
+                    TipPromotion.tip_text == canonical_text,
+                    TipPromotion.location_id == location.id
+                ).first()
+
+                if existing:
+                    existing.mention_count = mention_count
+                    existing.category_id = most_common_category
+                    rep_vec = embedding_cache.get(group_tips[0].id)
+                    if rep_vec:
+                        scores = [
+                            self.embedding_service.similarity(rep_vec, embedding_cache[t.id])
+                            for t in group_tips if t.id in embedding_cache
+                        ]
+                        existing.similarity_score = sum(scores) / len(scores) if scores else 0.85
+                else:
+                    representative_tip = group_tips[0]
+                    if not skip_translation:
+                        new_representative_tips.append(representative_tip)
+                    promotion = TipPromotion(
+                        tip_text=canonical_text,
+                        location_id=location.id,
+                        source_tip_id=representative_tip.id,
+                        mention_count=mention_count,
+                        similarity_score=0.85,
+                        category_id=most_common_category,
                     )
-
-                    existing = db.query(TipPromotion).filter(
-                        TipPromotion.tip_text == canonical_text,
-                        TipPromotion.location_id == location.id
-                    ).first()
-
-                    if existing:
-                        existing.mention_count = mention_count
-                        existing.category_id = most_common_category
-                        # Recalculate average similarity using cached embeddings
-                        representative_vec = embedding_cache.get(group_tips[0].id)
-                        if representative_vec:
-                            scores = [
-                                self.embedding_service.similarity(representative_vec, embedding_cache[t.id])
-                                for t in group_tips if t.id in embedding_cache
-                            ]
-                            existing.similarity_score = sum(scores) / len(scores) if scores else 0.85
-                    else:
-                        representative_tip = group_tips[0] if group_tips else None
-                        if not skip_translation and representative_tip:
-                            new_representative_tips.append(representative_tip)
-
-                        promotion = TipPromotion(
-                            tip_text=canonical_text,
-                            location_id=location.id,
-                            source_tip_id=representative_tip.id if representative_tip else None,
-                            mention_count=mention_count,
-                            similarity_score=0.85,
-                            category_id=most_common_category
-                        )
-                        db.add(promotion)
-                        promoted.append(promotion)
+                    db.add(promotion)
+                    promoted.append(promotion)
 
         db.commit()
-
-        # Batch translate all new promotions in one shot — M generate() calls
-        # (one per target language) instead of N×M calls (one per tip per language)
         if new_representative_tips:
             self._batch_translate_promoted_tips(new_representative_tips, db)
-
         return promoted
 
 

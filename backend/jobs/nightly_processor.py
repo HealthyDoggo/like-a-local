@@ -251,31 +251,32 @@ def process_pending_tips(
         stats["classification_errors"] = 1
 
     logger.info(f"Processing complete: {stats}")
-    return stats
+    return stats, all_processed_tips
 
 
-def run_promotion(db: Session) -> int:
+def run_promotion(db: Session, new_tips: List[Tip] = None) -> int:
     """
     Run tip promotion logic to identify frequently mentioned tips.
-    
-    This analyzes processed tips in Pi's database to find:
-    - Tips mentioned multiple times for the same location
-    - Similar tips (using vector similarity)
-    - Promotes tips that meet threshold criteria
-    
+
+    When new_tips is provided (nightly job), only those tips are compared
+    against existing promotions (incremental mode). When None, all tips are
+    reclustered from scratch (forced via API endpoint after e.g. a threshold
+    change).
+
     All processing happens on Pi using embeddings already stored in database.
-    
+
     Args:
         db: Database session (connected to Pi's PostgreSQL)
-        
+        new_tips: Tips processed in the current run, or None for full recluster
+
     Returns:
         Number of tips promoted
     """
     logger.info("Running tip promotion")
-    
+
     promotion_service = get_promotion_service()
-    promoted = promotion_service.promote_tips(db)
-    
+    promoted = promotion_service.promote_tips(db, new_tips=new_tips)
+
     logger.info(f"Promoted {len(promoted)} tips")
     return len(promoted)
 
@@ -309,14 +310,13 @@ def nightly_job(wake_pc: bool = True, promote: bool = True, sleep_pc: bool = Fal
     try:
         # Process pending tips
         # This wakes PC if needed, processes tips, stores results back to Pi's DB
-        stats = process_pending_tips(db, wake_pc=wake_pc)
-        
+        stats, processed_tips = process_pending_tips(db, wake_pc=wake_pc)
+
         # Run promotion only when tips were actually processed this run.
-        # If nothing was processed, promotion results cannot have changed,
-        # and running it would do O(N²) similarity work across all locations
-        # for no benefit. Use the /api/jobs/promote endpoint to force a run.
-        if promote and stats.get("processed", 0) > 0:
-            promoted_count = run_promotion(db)
+        # Pass the newly processed tips so promotion compares them against
+        # existing promotions rather than reclustering all tips from scratch.
+        if promote and processed_tips:
+            promoted_count = run_promotion(db, new_tips=processed_tips)
             stats["promoted"] = promoted_count
         
         logger.info(f"Nightly job completed: {stats}")

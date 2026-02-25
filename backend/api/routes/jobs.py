@@ -17,7 +17,7 @@ class JobResponse(BaseModel):
 def run_processing_job(db: Session, wake_pc: bool = True):
     """Background task for processing"""
     try:
-        stats = process_pending_tips(db, wake_pc=wake_pc)
+        stats, _ = process_pending_tips(db, wake_pc=wake_pc)
         return stats
     except Exception as e:
         raise Exception(f"Processing job failed: {e}")
