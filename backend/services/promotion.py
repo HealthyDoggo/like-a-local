@@ -170,6 +170,8 @@ class PromotionService:
             promo_vecs: Dict[int, list] = {p.id: e.embedding for p, e in promo_rows if e}
 
             unmatched: List[Tip] = []
+            # Track source_tip_ids of matched promotions that may need translation
+            matched_source_tip_ids: set = set()
 
             for tip in location_new_tips:
                 tip_vec = new_tip_vecs.get(tip.id)
@@ -190,8 +192,20 @@ class PromotionService:
                     best_promo.mention_count += 1
                     if tip.category_id and not best_promo.category_id:
                         best_promo.category_id = tip.category_id
+                    if best_promo.source_tip_id:
+                        matched_source_tip_ids.add(best_promo.source_tip_id)
                 else:
                     unmatched.append(tip)
+
+            # Re-translate source tips of matched promotions that lost their
+            # translations (e.g. after running reset_tips_for_reprocessing).
+            # _batch_translate_promoted_tips skips tips that already have
+            # translations, so this is a no-op in the normal case.
+            if not skip_translation and matched_source_tip_ids:
+                source_tips = db.query(Tip).filter(
+                    Tip.id.in_(matched_source_tip_ids)
+                ).all()
+                new_representative_tips.extend(source_tips)
 
             # Group unmatched new tips with each other to catch brand-new clusters
             unmatched_seen: set = set()
@@ -314,6 +328,16 @@ class PromotionService:
                             for t in group_tips if t.id in embedding_cache
                         ]
                         existing.similarity_score = sum(scores) / len(scores) if scores else 0.85
+                    # Enqueue source tip for translation in case it lost its
+                    # TipTranslation records (e.g. after a reset). No-op if
+                    # translations already exist (_batch_translate_promoted_tips
+                    # skips tips that have them).
+                    if not skip_translation:
+                        source_tip = next(
+                            (t for t in group_tips if t.id == existing.source_tip_id),
+                            group_tips[0]
+                        )
+                        new_representative_tips.append(source_tip)
                 else:
                     representative_tip = group_tips[0]
                     if not skip_translation:

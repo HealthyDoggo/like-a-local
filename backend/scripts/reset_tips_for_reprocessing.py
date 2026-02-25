@@ -56,9 +56,9 @@ def reset_for_reprocessing(confirm: bool = False):
         print(f"Deleted {deleted_translations} translations")
         print("Run the nightly processor to reprocess.")
 
-        # Reset promotions
+        # Reset promotions whose representative tip is being reset
         deleted_promotions = db.query(TipPromotion).filter(
-            TipPromotion.tip_id.in_(tip_ids)
+            TipPromotion.source_tip_id.in_(tip_ids)
         ).delete(synchronize_session=False)
 
         print(f"Deleted {deleted_promotions} promotions")
