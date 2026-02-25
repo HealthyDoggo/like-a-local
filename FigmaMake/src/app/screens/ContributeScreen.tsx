@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Button } from '@/app/components/Button';
@@ -7,11 +8,23 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
 import { useMyTips } from '@/hooks/useTips';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function ContributeScreen() {
   const navigate = useNavigate();
   const { reducedMotion } = useSettings();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { tips: userTips, loading, error } = useMyTips();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/sign-in', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading || (!isAuthenticated && !authLoading)) {
+    return null;
+  }
 
   const uniqueCities = new Set(userTips.map(tip => tip.location_name).filter(Boolean));
   const processedCount = userTips.filter(t => t.status === 'processed').length;
