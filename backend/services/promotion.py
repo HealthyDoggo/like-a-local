@@ -2,7 +2,6 @@
 import logging
 from typing import List, Dict
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from backend.database.models import Tip, TipPromotion, Location, Embedding, TipTranslation
 from backend.services.embedding import get_embedding_service
 from backend.services.processing_client import get_processing_client
@@ -19,81 +18,80 @@ class PromotionService:
         self.embedding_service = get_embedding_service()
         self.processing_client = get_processing_client()
 
-    def translate_tip_to_all_languages(self, tip: Tip, db: Session) -> bool:
+    def _batch_translate_promoted_tips(
+        self,
+        representative_tips: List[Tip],
+        db: Session,
+    ) -> None:
         """
-        Translate a tip to all supported languages.
+        Translate a batch of newly promoted tips to all supported languages.
 
-        Only translates if:
-        1. Tip has not been translated yet (no entries in TipTranslation)
-        2. PC processing service is available
+        Uses a single translate_multi_batch() call so the PC runs one
+        model.generate() per language instead of one per (tip × language).
 
-        Args:
-            tip: The tip to translate
-            db: Database session
-
-        Returns:
-            True if translation succeeded, False otherwise
+        All tips are expected to have translated_text (English) from processing.
+        English is used as the source language for all translations since it
+        is already available and gives the best NLLB translation quality.
         """
-        # Check if translations already exist
-        existing = db.query(TipTranslation).filter(
-            TipTranslation.tip_id == tip.id
-        ).first()
+        if not representative_tips:
+            return
 
-        if existing:
-            logger.info(f"Tip {tip.id} already has translations, skipping")
-            return True
+        # Skip tips that already have translations (safety guard for reruns)
+        to_translate = [
+            t for t in representative_tips
+            if not db.query(TipTranslation).filter(TipTranslation.tip_id == t.id).first()
+        ]
+        if not to_translate:
+            return
 
-        # Determine source language and text
-        source_language = tip.original_language or "en"
-        source_text = tip.tip_text
-
-        # Determine which languages to translate to (exclude source language)
-        target_languages = [lang for lang in settings.supported_languages if lang != source_language]
+        other_languages = [lang for lang in settings.supported_languages if lang != "en"]
+        english_texts = [t.translated_text or t.tip_text for t in to_translate]
 
         try:
-            # Call PC service for multi-language translation
-            logger.info(f"Translating tip {tip.id} from {source_language} to {len(target_languages)} languages")
-            translations = self.processing_client.translate_multi(
-                text=source_text,
-                source_language=source_language,
-                target_languages=target_languages
+            logger.info(
+                f"Batch translating {len(to_translate)} promoted tips "
+                f"into {len(other_languages)} languages"
+            )
+            # One HTTP request; PC runs one model.generate() per target language
+            # with all texts batched together
+            batch_translations = self.processing_client.translate_multi_batch(
+                texts=english_texts,
+                source_language="en",
+                target_languages=other_languages,
             )
 
-            # Store original language translation
-            db.add(TipTranslation(
-                tip_id=tip.id,
-                language_code=source_language,
-                translated_text=source_text
-            ))
-
-            # Store English translation if we have it and it's different from source
-            if source_language != "en" and tip.translated_text:
+            for tip_idx, tip in enumerate(to_translate):
+                # English
                 db.add(TipTranslation(
                     tip_id=tip.id,
                     language_code="en",
-                    translated_text=tip.translated_text
+                    translated_text=english_texts[tip_idx],
                 ))
-
-            # Store all other translations
-            for lang_code, translated_text in translations.items():
-                # Skip if we already added it (original or English)
-                if lang_code == source_language or (lang_code == "en" and tip.translated_text):
-                    continue
-
-                db.add(TipTranslation(
-                    tip_id=tip.id,
-                    language_code=lang_code,
-                    translated_text=translated_text
-                ))
+                # Original language text (if not English)
+                original_lang = tip.original_language
+                if original_lang and original_lang != "en":
+                    db.add(TipTranslation(
+                        tip_id=tip.id,
+                        language_code=original_lang,
+                        translated_text=tip.tip_text,
+                    ))
+                # All other target languages from the batch
+                for lang_code, translated_list in batch_translations.items():
+                    if lang_code == "en" or lang_code == original_lang:
+                        continue
+                    if tip_idx < len(translated_list) and translated_list[tip_idx]:
+                        db.add(TipTranslation(
+                            tip_id=tip.id,
+                            language_code=lang_code,
+                            translated_text=translated_list[tip_idx],
+                        ))
 
             db.commit()
-            logger.info(f"Successfully translated tip {tip.id} to {len(translations)} languages")
-            return True
+            logger.info(f"Successfully batch translated {len(to_translate)} promoted tips")
 
         except Exception as e:
-            logger.error(f"Failed to translate tip {tip.id}: {e}")
+            logger.error(f"Batch translation of promoted tips failed: {e}")
             db.rollback()
-            return False
     
     def find_similar_tips(
         self,
@@ -153,6 +151,7 @@ class PromotionService:
             List of promoted tips
         """
         promoted = []
+        new_representative_tips: List[Tip] = []
 
         # Get all locations
         locations = db.query(Location).all()
@@ -236,10 +235,9 @@ class PromotionService:
                                 logger.error(f"Error calculating similarity: {e}")
                                 existing.similarity_score = 0.85
                     else:
-                        # Only translate if not skipping (for reclustering, we skip)
                         representative_tip = group_tips[0] if group_tips else None
                         if not skip_translation and representative_tip:
-                            self.translate_tip_to_all_languages(representative_tip, db)
+                            new_representative_tips.append(representative_tip)
 
                         # Create new promotion
                         promotion = TipPromotion(
@@ -254,6 +252,12 @@ class PromotionService:
                         promoted.append(promotion)
 
         db.commit()
+
+        # Batch translate all new promotions in one shot — M generate() calls
+        # (one per target language) instead of N×M calls (one per tip per language)
+        if new_representative_tips:
+            self._batch_translate_promoted_tips(new_representative_tips, db)
+
         return promoted
 
 

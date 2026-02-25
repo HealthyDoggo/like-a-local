@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple
 from sqlalchemy.orm import Session
 from backend.database.connection import SessionLocal
-from backend.database.models import Tip, Embedding, TipTranslation
+from backend.database.models import Tip, Embedding
 from backend.services.processing_client import get_processing_client
 from backend.services.promotion import get_promotion_service
 from backend.services.category_classifier import get_category_classifier
@@ -166,8 +166,6 @@ def process_pending_tips(
         logger.error(f"Expected service at: {processing_client.api_url}")
         return stats
 
-    other_languages = [lang for lang in settings.supported_languages if lang != "en"]
-
     # Track every tip processed across all batches for classification at the end
     all_processed_tips: list[Tip] = []
 
@@ -220,49 +218,7 @@ def process_pending_tips(
 
         db.commit()
 
-        # --- Multi-language translations (one batched request for all tips) ---
-        tips_to_translate = [t for t in pending_tips if t.status == "processed"]
-        logger.info(f"Generating multi-language translations for {len(tips_to_translate)} tips...")
-
-        translation_count = 0
-        if tips_to_translate:
-            english_texts = [t.translated_text or t.tip_text for t in tips_to_translate]
-            try:
-                # Single request: PC translates all texts to each language with
-                # one batched model.generate() call per language (M calls total
-                # instead of N*M individual calls).
-                batch_translations = processing_client.translate_multi_batch(
-                    texts=english_texts,
-                    source_language="en",
-                    target_languages=other_languages,
-                )
-                # batch_translations[lang_code] = [translated_text_0, ...]
-
-                for tip_idx, tip in enumerate(tips_to_translate):
-                    for lang_code, translated_list in batch_translations.items():
-                        if tip_idx >= len(translated_list):
-                            continue
-                        translated = translated_list[tip_idx]
-                        if not translated:
-                            continue
-                        existing = db.query(TipTranslation).filter(
-                            TipTranslation.tip_id == tip.id,
-                            TipTranslation.language_code == lang_code
-                        ).first()
-                        if existing:
-                            existing.translated_text = translated
-                        else:
-                            db.add(TipTranslation(tip_id=tip.id, language_code=lang_code, translated_text=translated))
-                    translation_count += 1
-
-                db.commit()
-            except Exception as e:
-                logger.error(f"Multi-language batch translation error: {e}")
-
-        stats["multi_translated"] = stats.get("multi_translated", 0) + translation_count
-        logger.info(f"Translated {translation_count} tips into {len(other_languages)} languages")
-
-        all_processed_tips.extend(tips_to_translate)
+        all_processed_tips.extend(t for t in pending_tips if t.status == "processed")
 
     # --- Classify all tips processed in this run (runs once, after all batches) ---
     logger.info("Classifying tips into categories...")
