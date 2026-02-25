@@ -15,7 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database.connection import SessionLocal
-from backend.database.models import Tip, Embedding, TipTranslation
+from backend.database.models import Tip, Embedding, TipTranslation, TipPromotion
 
 
 def reset_for_reprocessing(confirm: bool = False):
@@ -55,6 +55,13 @@ def reset_for_reprocessing(confirm: bool = False):
         print(f"Deleted {deleted_embeddings} embeddings")
         print(f"Deleted {deleted_translations} translations")
         print("Run the nightly processor to reprocess.")
+
+        # Reset promotions
+        deleted_promotions = db.query(TipPromotion).filter(
+            TipPromotion.tip_id.in_(tip_ids)
+        ).delete(synchronize_session=False)
+
+        print(f"Deleted {deleted_promotions} promotions")
 
     finally:
         db.close()
