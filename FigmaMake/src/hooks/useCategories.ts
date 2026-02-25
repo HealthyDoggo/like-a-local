@@ -55,7 +55,10 @@ export function useCategories(locationName?: string, locationCountry?: string) {
           console.log('Backend categories:', backendCategories);
           console.log('Category counts before transform:', categoryCounts);
 
-          // Transform backend categories to frontend format
+          // Transform backend categories to frontend format.
+          // The "uncategorized" (Other) category is hidden when the location
+          // has no uncategorized tips — it's always returned by the API but
+          // only meaningful when its count is > 0.
           const transformedCategories = backendCategories
             .map((cat: CategoryResponse) => ({
               id: cat.id,
@@ -65,6 +68,7 @@ export function useCategories(locationName?: string, locationCountry?: string) {
               color: getColorVariant(cat.color),
               displayOrder: cat.display_order ?? 999,
             }))
+            .filter((cat) => cat.id !== 'uncategorized' || cat.tipCount > 0)
             .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
 
           console.log('Transformed categories with counts:', transformedCategories);

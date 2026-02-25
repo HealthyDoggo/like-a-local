@@ -10,6 +10,7 @@ from sqlalchemy import and_
 from backend.database.models import Location, Tip, TipPromotion, TipTranslation
 from backend.api.dependencies import get_database
 from backend.api.routes.tips import TipResponse
+from backend.api.routes.categories import UNCATEGORIZED_ID
 
 router = APIRouter(prefix="/api/locations", tags=["locations"])
 
@@ -214,7 +215,17 @@ def get_category_counts(
         TipPromotion.category_id.isnot(None)
     ).group_by(TipPromotion.category_id).all()
 
-    return {category: count for category, count in counts}
+    result = {category: count for category, count in counts}
+
+    # Include uncategorized count so the frontend can show/hide the "Other" card
+    uncategorized_count = db.query(func.count(TipPromotion.id)).filter(
+        TipPromotion.location_id == location_id,
+        TipPromotion.category_id.is_(None)
+    ).scalar()
+    if uncategorized_count:
+        result[UNCATEGORIZED_ID] = uncategorized_count
+
+    return result
 
 
 @router.get("/{location_id}/promoted-tips", response_model=List[PromotedTipResponse])
@@ -242,7 +253,9 @@ def get_location_promoted_tips(
         .filter(TipPromotion.location_id == location_id)
     )
 
-    if category_id:
+    if category_id == UNCATEGORIZED_ID:
+        query = query.filter(TipPromotion.category_id.is_(None))
+    elif category_id:
         query = query.filter(TipPromotion.category_id == category_id)
 
     rows = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()
@@ -295,7 +308,9 @@ def get_promoted_tips_by_location_name(
         .filter(TipPromotion.location_id == location.id)
     )
 
-    if category_id:
+    if category_id == UNCATEGORIZED_ID:
+        query = query.filter(TipPromotion.category_id.is_(None))
+    elif category_id:
         query = query.filter(TipPromotion.category_id == category_id)
 
     rows = query.order_by(TipPromotion.mention_count.desc()).limit(limit).all()

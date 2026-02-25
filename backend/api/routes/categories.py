@@ -22,13 +22,16 @@ class CategoryResponse(BaseModel):
         from_attributes = True
 
 
+UNCATEGORIZED_ID = "uncategorized"
+
+
 @router.get("", response_model=List[CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
     """Get all categories with metadata"""
     categories = db.query(Category).order_by(Category.display_order).all()
 
     # Transform categories to handle JSON description field
-    return [
+    result = [
         CategoryResponse(
             id=cat.id,
             title=cat.title,
@@ -39,3 +42,16 @@ def get_categories(db: Session = Depends(get_db)):
         )
         for cat in categories
     ]
+
+    # Append a synthetic catch-all for promoted tips with no assigned category.
+    # The frontend hides this card when the location has no uncategorized tips.
+    result.append(CategoryResponse(
+        id=UNCATEGORIZED_ID,
+        title="Other",
+        description="Tips that didn't fit a specific category",
+        icon_name=None,  # resolves to HelpCircle in the frontend iconMapper
+        color=None,
+        display_order=9999
+    ))
+
+    return result
