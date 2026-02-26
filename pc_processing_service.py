@@ -324,19 +324,37 @@ def translate_to_multiple_languages_batch(request: TranslateMultiBatchRequest):
     model.generate() call — reducing M*N generate() calls to just M calls
     (one per target language).
     """
+    import time
     try:
         translation_service = get_translation_service()
         translations: Dict[str, List[str]] = {}
 
+        n_texts = len(request.texts)
+        target_langs_to_translate = [l for l in request.target_languages if l != request.source_language]
+        n_langs = len(target_langs_to_translate)
+
+        logger.info(
+            f"translate-multi-batch: {n_texts} texts, source={request.source_language}, "
+            f"{n_langs} target languages: {target_langs_to_translate}"
+        )
+        t_total_start = time.monotonic()
+
         # Always include source language texts as-is
         translations[request.source_language] = list(request.texts)
 
-        for target_lang in request.target_languages:
+        for i, target_lang in enumerate(request.target_languages):
             if target_lang == request.source_language:
                 continue
+            t_lang_start = time.monotonic()
+            logger.info(f"  [{i+1}/{n_langs}] Translating {n_texts} texts -> {target_lang} ...")
             translations[target_lang] = translation_service.translate_batch_to_language(
                 request.texts, request.source_language, target_lang
             )
+            elapsed = time.monotonic() - t_lang_start
+            logger.info(f"  [{i+1}/{n_langs}] {target_lang} done in {elapsed:.2f}s")
+
+        total_elapsed = time.monotonic() - t_total_start
+        logger.info(f"translate-multi-batch: completed in {total_elapsed:.2f}s total")
 
         return TranslateMultiBatchResponse(translations=translations)
     except Exception as e:
