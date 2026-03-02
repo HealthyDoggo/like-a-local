@@ -29,13 +29,36 @@ from backend.config import settings
 def debug_translations(count: int = 10, location_id: int = None, missing_lang: str = None):
     db = SessionLocal()
     try:
-        query = db.query(TipPromotion).filter(TipPromotion.source_tip_id.isnot(None))
+        base_query = db.query(TipPromotion)
         if location_id:
-            query = query.filter(TipPromotion.location_id == location_id)
-        promotions = query.all()
+            base_query = base_query.filter(TipPromotion.location_id == location_id)
+        all_promotions = base_query.all()
+
+        if not all_promotions:
+            print("No promoted tips found.")
+            return
+
+        # Always report NULL source_tip_id promotions upfront — these can never
+        # be translated regardless of what else is done.
+        null_source = [p for p in all_promotions if p.source_tip_id is None]
+        if null_source:
+            print(f"\n{'!'*70}")
+            print(f"WARNING: {len(null_source)} promotion(s) have source_tip_id = NULL")
+            print("These were created before the source_tip_id column was added and")
+            print("will ALWAYS show in English. Fix: delete and recluster, or backfill.")
+            print(f"{'!'*70}")
+            for p in null_source[:5]:
+                loc = db.query(Location).filter(Location.id == p.location_id).first()
+                loc_label = f"{loc.name}, {loc.country}" if loc else f"location_id={p.location_id}"
+                preview = p.tip_text[:70] + ("..." if len(p.tip_text) > 70 else "")
+                print(f"  promotion_id={p.id}  [{loc_label}]  \"{preview}\"")
+            if len(null_source) > 5:
+                print(f"  ... and {len(null_source) - 5} more")
+
+        promotions = [p for p in all_promotions if p.source_tip_id is not None]
 
         if not promotions:
-            print("No promoted tips found.")
+            print("\nNo promotions with source_tip_id to inspect.")
             return
 
         if missing_lang:
@@ -49,7 +72,7 @@ def debug_translations(count: int = 10, location_id: int = None, missing_lang: s
                 if not has_lang:
                     filtered.append(promo)
             promotions = filtered
-            print(f"Promotions missing '{missing_lang}' translation: {len(promotions)}")
+            print(f"\nPromotions (with source_tip_id) missing '{missing_lang}' translation: {len(promotions)}")
             if not promotions:
                 return
 
@@ -89,7 +112,9 @@ def debug_translations(count: int = 10, location_id: int = None, missing_lang: s
                     print(f"    [{lang}] MISSING")
 
         print(f"\n{'='*70}")
-        print(f"Sampled {len(sample)} of {len(promotions)} promoted tips")
+        with_source = len([p for p in all_promotions if p.source_tip_id is not None])
+        print(f"Sampled {len(sample)} of {with_source} promotions with source_tip_id "
+              f"({len(null_source)} without source_tip_id skipped)")
 
     finally:
         db.close()
