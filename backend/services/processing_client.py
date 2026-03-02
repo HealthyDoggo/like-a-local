@@ -155,7 +155,7 @@ class ProcessingClient:
 
         # Scale timeout by number of languages so slow NLLB runs don't time out
         if timeout is None:
-            timeout = max(300, 45 * len(target_languages))
+            timeout = max(300, 60 * len(target_languages))
 
         try:
             response = requests.post(
