@@ -30,6 +30,7 @@ import logging
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from backend.database.connection import SessionLocal
 from backend.database.models import Tip, TipPromotion, TipTranslation
 from backend.services.processing_client import get_processing_client
@@ -61,9 +62,10 @@ def translate_promoted_tips(
 
         all_languages = set(settings.supported_languages)
 
-        # Determine which tips need translation
+        # Determine which tips need translation.
+        # A tip is skipped only if it already has every supported language (unless
+        # --force, in which case all tips are re-translated).
         to_translate: list[Tip] = []
-        missing_by_tip: dict[int, set] = {}
 
         for tip_id in source_tip_ids:
             tip = db.query(Tip).filter(Tip.id == tip_id).first()
@@ -74,31 +76,27 @@ def translate_promoted_tips(
                 logger.warning(f"Tip {tip_id} has no text — skipping")
                 continue
 
-            if force:
-                missing = all_languages
-            else:
-                existing_langs = {
-                    t.language_code
-                    for t in db.query(TipTranslation).filter(
-                        TipTranslation.tip_id == tip_id
-                    ).all()
-                }
-                missing = all_languages - existing_langs
+            if not force:
+                existing_count = db.query(TipTranslation).filter(
+                    TipTranslation.tip_id == tip_id
+                ).count()
+                if existing_count >= len(all_languages):
+                    continue  # Already fully translated
 
-            if missing:
-                to_translate.append(tip)
-                missing_by_tip[tip_id] = missing
+            to_translate.append(tip)
 
-        print(f"Promoted tips missing translations: {len(to_translate)}")
+        print(f"Promoted tips to translate: {len(to_translate)}")
 
         if not confirm:
             print("Dry run — pass --confirm to actually translate")
             if to_translate:
                 print("\nSample of tips that would be translated:")
                 for tip in to_translate[:5]:
+                    existing_count = db.query(TipTranslation).filter(
+                        TipTranslation.tip_id == tip.id
+                    ).count()
                     preview = (tip.translated_text or tip.tip_text or "")[:70]
-                    missing = sorted(missing_by_tip[tip.id])
-                    print(f"  tip_id={tip.id}: missing {missing}")
+                    print(f"  tip_id={tip.id}: {existing_count}/{len(all_languages)} languages present")
                     print(f"    text: {preview}")
             return
 
@@ -124,51 +122,38 @@ def translate_promoted_tips(
             target_languages=other_languages,
         )
 
-        for tip_idx, tip in enumerate(to_translate):
-            missing_langs = missing_by_tip[tip.id]
+        def upsert(tip_id: int, language_code: str, translated_text: str) -> None:
+            """Insert a translation row, updating the text if it already exists (--force)
+            or silently skipping the insert if the row is already present (default)."""
+            stmt = pg_insert(TipTranslation).values(
+                tip_id=tip_id,
+                language_code=language_code,
+                translated_text=translated_text,
+            )
+            if force:
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["tip_id", "language_code"],
+                    set_={"translated_text": translated_text},
+                )
+            else:
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["tip_id", "language_code"]
+                )
+            db.execute(stmt)
 
+        for tip_idx, tip in enumerate(to_translate):
             # English
-            if "en" in missing_langs:
-                if force:
-                    db.query(TipTranslation).filter(
-                        TipTranslation.tip_id == tip.id,
-                        TipTranslation.language_code == "en",
-                    ).delete(synchronize_session=False)
-                db.add(TipTranslation(
-                    tip_id=tip.id,
-                    language_code="en",
-                    translated_text=english_texts[tip_idx],
-                ))
+            upsert(tip.id, "en", english_texts[tip_idx])
 
             # Original language (store the raw source text)
             orig = tip.original_language
-            if orig and orig != "en" and orig in missing_langs:
-                if force:
-                    db.query(TipTranslation).filter(
-                        TipTranslation.tip_id == tip.id,
-                        TipTranslation.language_code == orig,
-                    ).delete(synchronize_session=False)
-                db.add(TipTranslation(
-                    tip_id=tip.id,
-                    language_code=orig,
-                    translated_text=tip.tip_text,
-                ))
+            if orig and orig != "en":
+                upsert(tip.id, orig, tip.tip_text)
 
             # All other target languages from the batch response
             for lang_code, translated_list in batch_translations.items():
-                if lang_code not in missing_langs:
-                    continue
                 if tip_idx < len(translated_list) and translated_list[tip_idx]:
-                    if force:
-                        db.query(TipTranslation).filter(
-                            TipTranslation.tip_id == tip.id,
-                            TipTranslation.language_code == lang_code,
-                        ).delete(synchronize_session=False)
-                    db.add(TipTranslation(
-                        tip_id=tip.id,
-                        language_code=lang_code,
-                        translated_text=translated_list[tip_idx],
-                    ))
+                    upsert(tip.id, lang_code, translated_list[tip_idx])
 
         db.commit()
         print(f"Successfully translated {len(to_translate)} promoted tips")
