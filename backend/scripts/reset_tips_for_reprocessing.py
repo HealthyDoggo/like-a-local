@@ -40,6 +40,12 @@ def reset_for_reprocessing(confirm: bool = False):
             TipTranslation.tip_id.in_(tip_ids)
         ).delete(synchronize_session=False)
 
+        # Delete promotions whose representative tip is being reset.
+        # Must happen before db.commit() so it is included in the same transaction.
+        deleted_promotions = db.query(TipPromotion).filter(
+            TipPromotion.source_tip_id.in_(tip_ids)
+        ).delete(synchronize_session=False)
+
         # Reset tip fields and status
         for tip in tips:
             tip.status = "pending"
@@ -54,14 +60,8 @@ def reset_for_reprocessing(confirm: bool = False):
         print(f"Reset {len(tips)} tips to 'pending'")
         print(f"Deleted {deleted_embeddings} embeddings")
         print(f"Deleted {deleted_translations} translations")
-        print("Run the nightly processor to reprocess.")
-
-        # Reset promotions whose representative tip is being reset
-        deleted_promotions = db.query(TipPromotion).filter(
-            TipPromotion.source_tip_id.in_(tip_ids)
-        ).delete(synchronize_session=False)
-
         print(f"Deleted {deleted_promotions} promotions")
+        print("Run the nightly processor to reprocess.")
 
     finally:
         db.close()
