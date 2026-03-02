@@ -151,11 +151,11 @@ export function ContributeScreen() {
                     </span>
                     <div className="flex items-center gap-1.5">
                       {tip.status === 'processed' ? (
-                        <CheckCircle className="w-3.5 h-3.5" style={{ color: '#22c55e' }} />
+                        <CheckCircle className="w-3.5 h-3.5" style={{ color: 'var(--app-success)' }} />
                       ) : (
                         <Loader className="w-3.5 h-3.5" style={{ color: 'var(--app-text-secondary)' }} />
                       )}
-                      <span className="text-[11px]" style={{ color: tip.status === 'processed' ? '#22c55e' : 'var(--app-text-secondary)' }}>
+                      <span className="text-[11px]" style={{ color: tip.status === 'processed' ? 'var(--app-success)' : 'var(--app-text-secondary)' }}>
                         {tip.status === 'processed' ? 'Live' : 'Pending'}
                       </span>
                     </div>

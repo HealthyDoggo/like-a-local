@@ -28,7 +28,12 @@
   --app-surface-accent: #F1FAEE;
   --app-teal-alpha: rgba(69, 123, 157, 0.125);
   --app-yellow-alpha: rgba(244, 211, 94, 0.125);
-  
+  --app-error-bg: #fef2f2;
+  --app-error-text: #cc0000;
+  --app-success: #10b981;
+  --app-heart: #ef4444;
+  --app-btn-dark: #000000;
+
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -115,6 +120,11 @@
   --app-surface-accent: #2d3f47;
   --app-teal-alpha: rgba(107, 163, 199, 0.2);
   --app-yellow-alpha: rgba(244, 211, 94, 0.2);
+  --app-error-bg: #3b1515;
+  --app-error-text: #f87171;
+  --app-success: #34d399;
+  --app-heart: #f87171;
+  --app-btn-dark: #e8e8e8;
 }
 
 /* Reading Mode - Larger text and increased spacing */

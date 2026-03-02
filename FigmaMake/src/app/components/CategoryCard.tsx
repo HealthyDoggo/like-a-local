@@ -10,8 +10,9 @@ interface CategoryCardProps {
 }
 
 export function CategoryCard({ icon: Icon, title, tipCount, onClick, iconColor = 'teal' }: CategoryCardProps) {
-  const colorValue = iconColor === 'teal' ? '#457B9D' : '#F4D35E';
-  
+  const colorVar = iconColor === 'teal' ? 'var(--teal)' : 'var(--golden-yellow)';
+  const bgVar = iconColor === 'teal' ? 'var(--app-teal-alpha)' : 'var(--app-yellow-alpha)';
+
   return (
     <motion.button
       onClick={onClick}
@@ -23,9 +24,9 @@ export function CategoryCard({ icon: Icon, title, tipCount, onClick, iconColor =
       <div className="flex flex-row items-center gap-2.5">
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: `${colorValue}20` }}
+          style={{ backgroundColor: bgVar }}
         >
-          <Icon className="w-4 h-4" style={{ color: colorValue }} />
+          <Icon className="w-4 h-4" style={{ color: colorVar }} />
         </div>
         <div className="flex flex-col items-start min-w-0">
           <h3 className="text-sm font-semibold text-left w-full" style={{ color: 'var(--app-text-primary)' }}>

@@ -24,7 +24,7 @@ export function Input({ placeholder, value, onChange, type = 'text', className =
         autoComplete="off"
         autoCorrect="off"
         spellCheck="false"
-        className={`w-full px-4 py-3 rounded-[10px] border outline-none transition-colors ${
+        className={`w-full px-4 py-3 rounded-xl border outline-none transition-colors ${
           type === 'search' ? 'pl-12' : ''
         } ${className}`}
         style={{ 

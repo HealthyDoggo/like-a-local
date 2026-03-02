@@ -83,7 +83,7 @@ export function HomeScreen() {
               className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: 'var(--app-yellow-alpha)' }}
             >
-              <PenLine className="w-6 h-6" style={{ color: '#F4D35E' }} />
+              <PenLine className="w-6 h-6" style={{ color: 'var(--golden-yellow)' }} />
             </div>
             <div className="flex-1 text-left">
               <h2 

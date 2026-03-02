@@ -71,7 +71,7 @@ export function LanguageSettingsScreen() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="mb-4 p-4 rounded-xl flex items-center gap-3"
-            style={{ backgroundColor: '#10B981', color: '#fff' }}
+            style={{ backgroundColor: 'var(--app-success)', color: '#fff' }}
           >
             <Check className="w-5 h-5" />
             <span className="text-[14px] font-medium">Language updated successfully</span>

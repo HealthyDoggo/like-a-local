@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '@/app/components/Button';
 import { useNavigate } from 'react-router';
 import { MapPin, Train, Coffee, MessageCircle, Globe, Users, Compass, Heart } from 'lucide-react';
-import { useReducedMotion } from '@/app/hooks/useReducedMotion';
+import { useSettings } from '@/hooks/useSettings';
 
 const welcomeTranslations = [
   'Welcome',
@@ -32,7 +32,7 @@ const floatingIcons = [
 export function SplashScreen() {
   const navigate = useNavigate();
   const [currentWelcomeIndex, setCurrentWelcomeIndex] = useState(0);
-  const reducedMotion = useReducedMotion();
+  const { reducedMotion } = useSettings();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -54,7 +54,7 @@ export function SplashScreen() {
                 left: `${x}%`,
                 top: `${y}%`,
                 opacity: 0.05,
-                color: '#457B9D',
+                color: 'var(--teal)',
               }}
               initial={{ y: 0, x: 0, rotate: 0 }}
               animate={{
@@ -93,7 +93,7 @@ export function SplashScreen() {
               transition={{ duration: reducedMotion ? 0.5 : 2, ease: 'easeInOut' }}
               className="text-[72px] font-light text-center select-none whitespace-nowrap"
               style={{
-                color: '#457B9D',
+                color: 'var(--teal)',
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 200,
                 letterSpacing: '-0.02em',

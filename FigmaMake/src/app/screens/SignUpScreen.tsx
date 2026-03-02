@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, Mail, Apple, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettings } from '@/hooks/useSettings';
 
 export function SignUpScreen() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export function SignUpScreen() {
   const { signInWithGoogle, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { reducedMotion } = useSettings();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -47,11 +49,11 @@ export function SignUpScreen() {
 
   return (
     <div className="min-h-screen max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
-      <div className="px-8 py-8">
+      <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         {/* Header with back button */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={reducedMotion ? false : { opacity: 0, y: -10 }}
+          animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           className="flex items-center mb-12"
         >
           <button
@@ -65,14 +67,14 @@ export function SignUpScreen() {
 
         {/* Content */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
           className="mb-12"
         >
           <h1
-            className="text-[32px] leading-[38px] mb-3"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 700 }}
+            className="text-[28px] leading-[34px] mb-3"
+            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
           >
             Create an account
           </h1>
@@ -84,10 +86,10 @@ export function SignUpScreen() {
         {/* Error message */}
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 px-4 py-3 rounded-lg"
-            style={{ backgroundColor: '#fee', color: '#c00' }}
+            initial={reducedMotion ? false : { opacity: 0, y: -10 }}
+            animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+            className="mb-4 px-4 py-3 rounded-xl"
+            style={{ backgroundColor: 'var(--app-error-bg)', color: 'var(--app-error-text)' }}
           >
             <p className="text-sm">{error}</p>
           </motion.div>
@@ -95,17 +97,17 @@ export function SignUpScreen() {
 
         {/* Sign-up options */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.2 }}
           className="flex flex-col gap-4"
         >
           <motion.button
             onClick={() => handleSignUp('email')}
             disabled={isLoading}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl disabled:opacity-50"
-            style={{ backgroundColor: '#457B9D', color: '#fff' }}
-            whileTap={{ scale: 0.98 }}
+            style={{ backgroundColor: 'var(--app-text-accent)', color: '#fff' }}
+            whileTap={reducedMotion ? {} : { scale: 0.98 }}
           >
             <Mail className="w-5 h-5" />
             <span className="font-medium text-[15px]">Continue with email</span>
@@ -115,8 +117,8 @@ export function SignUpScreen() {
             onClick={() => handleSignUp('apple')}
             disabled={isLoading}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl disabled:opacity-50"
-            style={{ backgroundColor: '#000', color: '#fff' }}
-            whileTap={{ scale: 0.98 }}
+            style={{ backgroundColor: 'var(--app-btn-dark)', color: 'var(--app-bg)' }}
+            whileTap={reducedMotion ? {} : { scale: 0.98 }}
           >
             <Apple className="w-5 h-5" />
             <span className="font-medium text-[15px]">Continue with Apple</span>
@@ -127,7 +129,7 @@ export function SignUpScreen() {
             disabled={isLoading}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 disabled:opacity-50"
             style={{ borderColor: 'var(--app-border)', color: 'var(--app-text-primary)' }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={reducedMotion ? {} : { scale: 0.98 }}
           >
             <div className="w-5 h-5 flex items-center justify-center">
               {isLoading ? (
@@ -149,9 +151,9 @@ export function SignUpScreen() {
 
         {/* Language selector */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.3 }}
           className="mt-8"
         >
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text-primary)' }}>
@@ -183,9 +185,9 @@ export function SignUpScreen() {
 
         {/* Footer text */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={reducedMotion ? false : { opacity: 1 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.4 }}
           className="mt-8"
         >
           <p className="text-[13px] text-center leading-[20px]" style={{ color: 'var(--app-text-secondary)' }}>
@@ -201,9 +203,9 @@ export function SignUpScreen() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={reducedMotion ? false : { opacity: 1 }}
+          transition={reducedMotion ? { duration: 0 } : { delay: 0.5 }}
           className="mt-6"
         >
           <p className="text-[12px] text-center leading-[18px]" style={{ color: 'var(--app-text-secondary)', opacity: 0.7 }}>

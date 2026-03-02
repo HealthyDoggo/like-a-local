@@ -124,8 +124,8 @@ export function TipCard({
             <Heart
               className="w-5 h-5"
               style={{ 
-                color: saved ? '#EF4444' : 'var(--app-text-secondary)',
-                fill: saved ? '#EF4444' : 'none',
+                color: saved ? 'var(--app-heart)' : 'var(--app-text-secondary)',
+                fill: saved ? 'var(--app-heart)' : 'none',
                 strokeWidth: 2
               }}
             />
