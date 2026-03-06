@@ -8,7 +8,7 @@ export function NotFoundScreen() {
   const { reducedMotion } = useSettings();
 
   return (
-    <div className="min-h-screen max-w-[360px] mx-auto flex flex-col items-center justify-center px-5" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-5" style={{ backgroundColor: 'var(--app-bg)' }}>
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: -20 }}
         animate={reducedMotion ? false : { opacity: 1, y: 0 }}

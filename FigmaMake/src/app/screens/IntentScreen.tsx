@@ -16,7 +16,7 @@ export function IntentScreen() {
   };
 
   return (
-    <div className="min-h-screen max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-8 flex flex-col h-screen" style={{ paddingTop: 'max(4rem, calc(env(safe-area-inset-top) + 2rem))' }}>
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 20 }}

@@ -31,7 +31,7 @@ export function ContributeScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+      <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
           <h1 className="text-[24px] leading-[28px] mb-6" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
             Your city insights
@@ -45,7 +45,7 @@ export function ContributeScreen() {
 
   if (error) {
     return (
-      <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+      <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
           <h1 className="text-[24px] leading-[28px] mb-6" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
             Your city insights
@@ -58,7 +58,7 @@ export function ContributeScreen() {
   }
 
   return (
-    <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}

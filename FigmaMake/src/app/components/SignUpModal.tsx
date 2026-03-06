@@ -33,7 +33,7 @@ export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 z-50 max-w-[360px] mx-auto"
+            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 z-50"
           >
             <button
               onClick={onClose}

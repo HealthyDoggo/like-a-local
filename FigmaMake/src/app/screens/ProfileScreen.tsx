@@ -4,10 +4,11 @@ import { Settings, User, Heart, MessageSquare, ChevronRight, Globe } from 'lucid
 import { BottomNav } from '@/app/components/BottomNav';
 import { useSettings } from '@/hooks/useSettings';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function ProfileScreen() {
   const navigate = useNavigate();
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const { isAuthenticated: isLoggedIn } = useAuth();
   const { reducedMotion } = useSettings();
   const { language, availableLanguages } = useLanguage();
   const currentLanguage = availableLanguages.find(l => l.code === language);
@@ -55,7 +56,7 @@ export function ProfileScreen() {
   );
 
   return (
-    <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         <motion.h1
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}

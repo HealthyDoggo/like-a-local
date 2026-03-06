@@ -11,7 +11,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen max-w-[360px] mx-auto flex items-center justify-center" style={{ backgroundColor: 'var(--app-bg)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--app-bg)' }}>
         <LoadingSpinner />
       </div>
     );

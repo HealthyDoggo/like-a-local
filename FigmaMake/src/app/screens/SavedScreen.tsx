@@ -31,7 +31,7 @@ export function SavedScreen() {
   };
 
   return (
-    <div className="min-h-screen pb-20 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}

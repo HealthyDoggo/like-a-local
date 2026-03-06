@@ -45,7 +45,7 @@ export function SelectCountryScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen px-5 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
+      <div className="min-h-screen px-5" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export function SelectCountryScreen() {
 
   if (error) {
     return (
-      <div className="min-h-screen px-5 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
+      <div className="min-h-screen px-5" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
@@ -90,7 +90,7 @@ export function SelectCountryScreen() {
   }
 
   return (
-    <div className="min-h-screen px-5 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
+    <div className="min-h-screen px-5" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: -10 }}
         animate={reducedMotion ? false : { opacity: 1, y: 0 }}

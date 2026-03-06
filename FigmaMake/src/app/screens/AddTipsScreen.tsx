@@ -106,7 +106,7 @@ export function AddTipsScreen() {
   }
 
   return (
-    <div className="min-h-screen px-5 pb-32 max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))' }}>
+    <div className="min-h-screen px-5 pb-32" style={{ backgroundColor: 'var(--app-bg)', paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))' }}>
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: -10 }}
         animate={reducedMotion ? false : { opacity: 1, y: 0 }}
@@ -244,7 +244,7 @@ export function AddTipsScreen() {
         <span className="text-[15px] font-medium">Add another tip</span>
       </motion.button>
 
-      <div className="fixed bottom-0 left-0 right-0 px-5 py-6 max-w-[360px] mx-auto border-t" style={{ backgroundColor: 'var(--app-surface)', borderColor: 'var(--app-border)' }}>
+      <div className="fixed bottom-0 left-0 right-0 px-5 py-6 border-t" style={{ backgroundColor: 'var(--app-surface)', borderColor: 'var(--app-border)' }}>
         <Button onClick={handleSubmit} className="w-full" disabled={loading}>
           {loading ? 'Submitting...' : 'Continue'}
         </Button>

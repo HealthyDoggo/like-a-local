@@ -22,7 +22,7 @@ export function LanguageSettingsScreen() {
 
   return (
     <div
-      className="min-h-screen max-w-[360px] mx-auto"
+      className="min-h-screen"
       style={{ backgroundColor: 'var(--app-bg)' }}
     >
       <div

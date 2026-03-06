@@ -42,7 +42,7 @@ export function SplashScreen() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--app-bg)' }}>
       {/* Animated Icon Background */}
       {!reducedMotion && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

@@ -71,7 +71,7 @@ export function EmailSignUpScreen() {
   const passwordStrength = getPasswordStrength(formData.password);
 
   return (
-    <div className="min-h-screen max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         {/* Header with back button */}
         <motion.div

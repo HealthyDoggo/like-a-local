@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Heart, Volume2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TipCardProps {
   id?: string;
@@ -28,6 +29,7 @@ export function TipCard({
   onAuthRequired,
   showCategory = true
 }: TipCardProps) {
+  const { isAuthenticated } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [saved, setSaved] = useState(isSaved);
   const [isReading, setIsReading] = useState(false);
@@ -47,10 +49,7 @@ export function TipCard({
   };
 
   const handleSave = () => {
-    // Check if user is logged in (simplified - in real app, check auth state)
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    
-    if (!isLoggedIn && !saved) {
+    if (!isAuthenticated && !saved) {
       // Show auth modal if trying to save while not logged in
       if (onAuthRequired) {
         onAuthRequired();

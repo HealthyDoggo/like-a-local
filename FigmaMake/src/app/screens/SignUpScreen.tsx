@@ -9,7 +9,7 @@ import { useSettings } from '@/hooks/useSettings';
 export function SignUpScreen() {
   const navigate = useNavigate();
   const { language, setLanguage, availableLanguages } = useLanguage();
-  const { signInWithGoogle, isAuthenticated } = useAuth();
+  const { signInWithGoogle, isAuthenticated, isLoading: authIsLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { reducedMotion } = useSettings();
@@ -47,8 +47,16 @@ export function SignUpScreen() {
     }
   };
 
+  if (authIsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--app-bg)' }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-600" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen max-w-[360px] mx-auto" style={{ backgroundColor: 'var(--app-bg)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
         {/* Header with back button */}
         <motion.div
