@@ -11,7 +11,7 @@ import { useSettings } from '@/hooks/useSettings';
 
 // Generate flag image URL from country code
 const getFlagUrl = (countryCode: string): string => {
-  return `https://flagsapi.com/${countryCode.toUpperCase()}/flat/64.png`;
+  return `https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`;
 };
 
 export function VisitCountryScreen() {

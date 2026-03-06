@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     # Promotion/clustering configuration
     similarity_threshold: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.85"))  # Cosine similarity threshold for clustering
-    min_mentions: int = int(os.getenv("MIN_MENTIONS", "3"))  # Minimum mentions to promote a tip
+    min_mentions: int = int(os.getenv("MIN_MENTIONS", "1"))  # Minimum mentions to promote a tip
 
     # JWT configuration
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-in-production-use-openssl-rand-base64-32")
