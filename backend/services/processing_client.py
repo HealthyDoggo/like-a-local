@@ -219,7 +219,7 @@ class ProcessingClient:
             Dict mapping language codes to list of translated texts (same order as input)
         """
         if timeout is None:
-            timeout = max(600, 60 * len(target_languages))
+            timeout = max(600, 85 * len(target_languages))
 
         response = requests.post(
             f"{self.api_url}/translate-multi-batch",
