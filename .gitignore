@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.log
 
 # Virtual Environment
 venv/
@@ -44,6 +45,9 @@ bin/
 
 # User data
 user_data.json
+
+# AI Stuff
+models/
 
 .env.*
 .env
