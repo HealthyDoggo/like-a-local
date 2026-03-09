@@ -1,5 +1,7 @@
 """NLLB translation service with proper language detection"""
+import gc
 import logging
+import time
 import traceback
 from typing import List, Optional, Dict
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -200,8 +202,13 @@ class TranslationService:
             # Return original text on error
             return text
     
-    def translate_batch(self, texts: List[str], source_language: Optional[str] = None) -> List[str]:
-        """Translate a batch of texts"""
+    def translate_batch(
+        self,
+        texts: List[str],
+        source_language: Optional[str] = None,
+        sub_batch_size: int = 16,
+    ) -> List[str]:
+        """Translate a batch of texts, processing in sub-batches to cap peak RAM."""
         if not texts:
             return []
 
@@ -219,37 +226,54 @@ class TranslationService:
             return texts
 
         try:
-            # Set source language so the tokenizer handles tokens correctly
             self.tokenizer.src_lang = source_lang_code
+            forced_bos = self._get_forced_bos_token_id(self.target_language)
+            all_results: List[str] = []
+            n_chunks = (len(texts) + sub_batch_size - 1) // sub_batch_size
+            t_start = time.monotonic()
 
-            # Tokenize batch
-            inputs = self.tokenizer(
-                texts,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=512
-            ).to(self.device)
+            for chunk_idx, i in enumerate(range(0, len(texts), sub_batch_size)):
+                chunk = texts[i : i + sub_batch_size]
+                t_chunk = time.monotonic()
 
-            # Translate
-            with torch.no_grad():
-                translated_tokens = self.model.generate(
-                    **inputs,
-                    forced_bos_token_id=self._get_forced_bos_token_id(self.target_language),
-                    max_length=512
+                inputs = self.tokenizer(
+                    chunk,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=512,
+                ).to(self.device)
+
+                with torch.no_grad():
+                    translated_tokens = self.model.generate(
+                        **inputs,
+                        forced_bos_token_id=forced_bos,
+                        max_length=512,
+                    )
+
+                all_results.extend(
+                    self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
                 )
 
-            # Decode
-            translated_texts = self.tokenizer.batch_decode(
-                translated_tokens,
-                skip_special_tokens=True
-            )
+                del inputs, translated_tokens
 
-            return translated_texts
+                logger.info(
+                    f"  translate_batch {source_language}->en: "
+                    f"chunk {chunk_idx + 1}/{n_chunks} "
+                    f"({len(all_results)}/{len(texts)} texts) "
+                    f"{time.monotonic() - t_chunk:.1f}s"
+                )
+
+            elapsed = time.monotonic() - t_start
+            logger.info(
+                f"  translate_batch {source_language}->en: "
+                f"done {len(texts)} texts in {elapsed:.1f}s"
+            )
+            gc.collect()
+            return all_results
 
         except Exception as e:
             logger.error(f"Batch translation error: {e}\n{traceback.format_exc()}")
-            # Return original texts on error
             return texts
 
     def translate_to_language(self, text: str, source_language: str, target_language: str) -> str:
@@ -318,12 +342,16 @@ class TranslationService:
         texts: List[str],
         source_language: str,
         target_language: str,
+        sub_batch_size: int = 16,
     ) -> List[str]:
         """
         Translate a batch of texts from source_language to target_language.
 
         Like translate_batch() but supports an arbitrary target language instead
         of always translating to self.target_language (English).
+
+        Processes texts in sub-batches to cap peak memory usage (the KV cache
+        during generate() scales with batch size and can consume GBs of RAM).
         """
         if not texts:
             return []
@@ -336,25 +364,54 @@ class TranslationService:
         source_lang_code = LANGUAGE_CODES.get(source_language, "eng_Latn")
         target_lang_code = LANGUAGE_CODES.get(target_language, "eng_Latn")
 
+        all_results: List[str] = []
+
         try:
             self.tokenizer.src_lang = source_lang_code
+            forced_bos = self._get_forced_bos_token_id(target_lang_code)
+            n_chunks = (len(texts) + sub_batch_size - 1) // sub_batch_size
+            t_start = time.monotonic()
 
-            inputs = self.tokenizer(
-                texts,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=512
-            ).to(self.device)
+            for chunk_idx, i in enumerate(range(0, len(texts), sub_batch_size)):
+                chunk = texts[i : i + sub_batch_size]
+                t_chunk = time.monotonic()
 
-            with torch.no_grad():
-                translated_tokens = self.model.generate(
-                    **inputs,
-                    forced_bos_token_id=self._get_forced_bos_token_id(target_lang_code),
-                    max_length=512
+                inputs = self.tokenizer(
+                    chunk,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=512,
+                ).to(self.device)
+
+                with torch.no_grad():
+                    translated_tokens = self.model.generate(
+                        **inputs,
+                        forced_bos_token_id=forced_bos,
+                        max_length=512,
+                    )
+
+                all_results.extend(
+                    self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
                 )
 
-            return self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
+                del inputs, translated_tokens
+
+                logger.info(
+                    f"  {source_language}->{target_language}: "
+                    f"chunk {chunk_idx + 1}/{n_chunks} "
+                    f"({len(all_results)}/{len(texts)} texts) "
+                    f"{time.monotonic() - t_chunk:.1f}s"
+                )
+
+            elapsed = time.monotonic() - t_start
+            logger.info(
+                f"  {source_language}->{target_language}: "
+                f"done {len(texts)} texts in {elapsed:.1f}s"
+            )
+            gc.collect()
+
+            return all_results
 
         except Exception as e:
             logger.error(
