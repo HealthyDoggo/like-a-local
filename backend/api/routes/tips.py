@@ -6,7 +6,7 @@ from sqlalchemy import and_
 from pydantic import BaseModel, Field
 from datetime import datetime
 
-from backend.database.models import Tip, Location, Embedding, TipTranslation, User
+from backend.database.models import Tip, Location, TipTranslation, User
 from backend.api.dependencies import get_database, get_current_user_optional, get_current_user
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])

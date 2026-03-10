@@ -57,5 +57,15 @@ export function useSavedTips() {
     return Object.values(savedTipsData);
   };
 
-  return { savedTips, toggleSave, isSaved, getSavedTipsData };
+  const updateSavedTipTexts = (updates: Record<string, string>) => {
+    setSavedTipsData(prev => {
+      const next = { ...prev };
+      for (const [id, text] of Object.entries(updates)) {
+        if (next[id]) next[id] = { ...next[id], text };
+      }
+      return next;
+    });
+  };
+
+  return { savedTips, toggleSave, isSaved, getSavedTipsData, updateSavedTipTexts };
 }

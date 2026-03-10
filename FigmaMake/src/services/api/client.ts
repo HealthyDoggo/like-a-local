@@ -85,6 +85,7 @@ export const apiClient = {
           }
         } else {
           await clearAuth();
+          window.dispatchEvent(new CustomEvent('auth:expired'));
           throw new ApiError(401, 'Session expired', null);
         }
       }

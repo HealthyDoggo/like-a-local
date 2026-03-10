@@ -275,6 +275,34 @@ def get_location_promoted_tips(
 promoted_router = APIRouter(prefix="/api/promoted-tips", tags=["promoted-tips"])
 
 
+@promoted_router.get("/{promotion_id}", response_model=PromotedTipResponse)
+def get_promoted_tip(
+    promotion_id: int,
+    language: str = Query("en", description="Preferred language code (e.g., en, es, fr)"),
+    db: Session = Depends(get_database)
+):
+    """Get a single promoted tip by ID in the requested language."""
+    result = (
+        db.query(TipPromotion, TipTranslation.translated_text.label("preferred_translation"))
+        .outerjoin(
+            TipTranslation,
+            and_(
+                TipTranslation.tip_id == TipPromotion.source_tip_id,
+                TipTranslation.language_code == language,
+            )
+        )
+        .filter(TipPromotion.id == promotion_id)
+        .first()
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Promoted tip not found")
+
+    promotion, preferred_translation = result
+    response = PromotedTipResponse.model_validate(promotion)
+    response.tip_text = preferred_translation or promotion.tip_text
+    return response
+
+
 @promoted_router.get("", response_model=List[PromotedTipResponse])
 def get_promoted_tips_by_location_name(
     location_name: str = Query(..., description="Location name"),

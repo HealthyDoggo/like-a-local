@@ -25,6 +25,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
     initializeAuth();
   }, []);
 
+  // Listen for forced sign-out (e.g. token refresh failed mid-session)
+  useEffect(() => {
+    const handleAuthExpired = () => setUser(null);
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, []);
+
   // Auto-refresh token every 14 minutes
   useEffect(() => {
     if (user) {
@@ -58,16 +65,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 
       const token = await getAccessToken();
       if (token) {
-        // Try to load user data from storage
-        const userData = await getUserData();
-        if (userData) {
-          setUser(JSON.parse(userData));
-        } else {
-          // Fetch user data from API
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-          await setUserData(JSON.stringify(currentUser));
-        }
+        // Always verify token against server (handles expired tokens and refreshes them)
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+        await setUserData(JSON.stringify(currentUser));
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Settings, User, Heart, MessageSquare, ChevronRight, Globe } from 'lucide-react';
@@ -5,13 +6,20 @@ import { BottomNav } from '@/app/components/BottomNav';
 import { useSettings } from '@/hooks/useSettings';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { tipsService } from '@/services/api';
 
 export function ProfileScreen() {
   const navigate = useNavigate();
-  const { isAuthenticated: isLoggedIn } = useAuth();
+  const { isAuthenticated: isLoggedIn, user } = useAuth();
   const { reducedMotion } = useSettings();
   const { language, availableLanguages } = useLanguage();
   const currentLanguage = availableLanguages.find(l => l.code === language);
+  const [contributionCount, setContributionCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    tipsService.getMyTips().then(tips => setContributionCount(tips.length)).catch(() => setContributionCount(0));
+  }, [isLoggedIn]);
 
   const MenuItem = ({ 
     icon: Icon, 
@@ -120,10 +128,10 @@ export function ProfileScreen() {
                     className="text-[18px] leading-[24px] mb-1"
                     style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
                   >
-                    Traveler
+                    {user?.full_name || user?.email?.split('@')[0] || 'Traveler'}
                   </h2>
                   <p className="text-[14px]" style={{ color: 'var(--app-text-secondary)' }}>
-                    Member since 2025
+                    {user?.email}
                   </p>
                 </div>
               </div>
@@ -138,7 +146,9 @@ export function ProfileScreen() {
                 </div>
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--app-surface-secondary)' }}>
                   <MessageSquare className="w-5 h-5 mx-auto mb-1" style={{ color: 'var(--app-text-accent)' }} />
-                  <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>3</p>
+                  <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
+                    {contributionCount ?? '—'}
+                  </p>
                   <p className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>Contributions</p>
                 </div>
               </div>

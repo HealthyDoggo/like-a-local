@@ -24,6 +24,13 @@ export const locationsService = {
     return apiClient.get<PromotedTipResponse[]>(ENDPOINTS.PROMOTED_TIPS, params);
   },
 
+  async getPromotedTip(promotionId: number, language?: string): Promise<PromotedTipResponse> {
+    return apiClient.get<PromotedTipResponse>(
+      `${ENDPOINTS.PROMOTED_TIPS}/${promotionId}`,
+      language ? { language } : undefined
+    );
+  },
+
   async getCategoryCounts(locationId: number): Promise<Record<string, number>> {
     return apiClient.get<Record<string, number>>(
       `${ENDPOINTS.LOCATIONS}/${locationId}/category-counts`

@@ -4,21 +4,50 @@ import { BottomNav } from '@/app/components/BottomNav';
 import { TipCard } from '@/app/components/TipCard';
 import { Heart } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
-import { useSavedTips } from '@/hooks/useSavedTips';
+import { useSavedTips, SavedTip } from '@/hooks/useSavedTips';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { locationsService } from '@/services/api';
 
 export function SavedScreen() {
-  const { getSavedTipsData, toggleSave, isSaved } = useSavedTips();
-  const [savedTipObjects, setSavedTipObjects] = useState(getSavedTipsData());
+  const { getSavedTipsData, toggleSave, isSaved, updateSavedTipTexts } = useSavedTips();
+  const [savedTipObjects, setSavedTipObjects] = useState<SavedTip[]>(getSavedTipsData());
   const { reducedMotion } = useSettings();
+  const { language } = useLanguage();
 
+  // On mount or language change: translate and persist back to localStorage
   useEffect(() => {
-    const handleStorage = () => {
-      setSavedTipObjects(getSavedTipsData());
-    };
+    setSavedTipObjects(getSavedTipsData());
+    const current = getSavedTipsData();
+    if (current.length === 0 || !navigator.onLine) return;
 
+    let cancelled = false;
+    Promise.all(
+      current.map(async (tip) => {
+        try {
+          const fresh = await locationsService.getPromotedTip(parseInt(tip.id), language);
+          return [tip.id, fresh.tip_text] as const;
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const updates = Object.fromEntries(results.filter(Boolean) as [string, string][]);
+      updateSavedTipTexts(updates);
+      // Build display objects directly — don't re-read storage (state update is async)
+      setSavedTipObjects(current.map(tip =>
+        updates[tip.id] ? { ...tip, text: updates[tip.id] } : tip
+      ));
+    });
+
+    return () => { cancelled = true; };
+  }, [language]);
+
+  // Sync from storage when saves change elsewhere (other tab / TipsListScreen)
+  useEffect(() => {
+    const handleStorage = () => setSavedTipObjects(getSavedTipsData());
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(handleStorage, 500);
-
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
