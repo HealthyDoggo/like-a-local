@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { TipCard } from '@/app/components/TipCard';
