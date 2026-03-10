@@ -43,15 +43,11 @@ export function SavedScreen() {
     return () => { cancelled = true; };
   }, [language]);
 
-  // Sync from storage when saves change elsewhere (other tab / TipsListScreen)
+  // Sync from storage when saves change in another tab
   useEffect(() => {
     const handleStorage = () => setSavedTipObjects(getSavedTipsData());
     window.addEventListener('storage', handleStorage);
-    const interval = setInterval(handleStorage, 500);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      clearInterval(interval);
-    };
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   const handleUnsave = (tipId: string) => {
