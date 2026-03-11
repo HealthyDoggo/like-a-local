@@ -11,7 +11,7 @@ import { tipsService } from '@/services/api';
 export function ProfileScreen() {
   const navigate = useNavigate();
   const { isAuthenticated: isLoggedIn, user } = useAuth();
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, readingMode } = useSettings();
   const { language, availableLanguages } = useLanguage();
   const currentLanguage = availableLanguages.find(l => l.code === language);
   const [contributionCount, setContributionCount] = useState<number | null>(null);
@@ -40,20 +40,20 @@ export function ProfileScreen() {
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: 'var(--app-surface-accent)' }}
         >
           <Icon className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
         </div>
         <div className="text-left">
           <p
-            className="text-[15px] leading-[20px]"
+            className={readingMode ? 'text-[18px] leading-[26px]' : 'text-[15px] leading-[20px]'}
             style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}
           >
             {title}
           </p>
           {subtitle && (
-            <p className="text-[13px] leading-[18px]" style={{ color: 'var(--app-text-secondary)' }}>
+            <p className={readingMode ? 'text-[15px] leading-[22px]' : 'text-[13px] leading-[18px]'} style={{ color: 'var(--app-text-secondary)' }}>
               {subtitle}
             </p>
           )}
@@ -69,7 +69,7 @@ export function ProfileScreen() {
         <motion.h1
           initial={reducedMotion ? false : { opacity: 0, y: -10 }}
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-          className="text-[24px] leading-[28px] mb-8"
+          className={readingMode ? 'text-[28px] leading-[34px] mb-8' : 'text-[24px] leading-[28px] mb-8'}
           style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
         >
           Profile
@@ -125,12 +125,12 @@ export function ProfileScreen() {
                 </div>
                 <div>
                   <h2
-                    className="text-[18px] leading-[24px] mb-1"
+                    className={readingMode ? 'text-[22px] leading-[28px] mb-1' : 'text-[18px] leading-[24px] mb-1'}
                     style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
                   >
                     {user?.full_name || user?.email?.split('@')[0] || 'Traveler'}
                   </h2>
-                  <p className="text-[14px]" style={{ color: 'var(--app-text-secondary)' }}>
+                  <p className={readingMode ? 'text-[16px]' : 'text-[14px]'} style={{ color: 'var(--app-text-secondary)' }}>
                     {user?.email}
                   </p>
                 </div>
@@ -139,17 +139,17 @@ export function ProfileScreen() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--app-surface-secondary)' }}>
                   <Heart className="w-5 h-5 mx-auto mb-1" style={{ color: 'var(--app-text-accent)' }} />
-                  <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
+                  <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
                     {JSON.parse(localStorage.getItem('savedTips') || '[]').length}
                   </p>
-                  <p className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>Saved tips</p>
+                  <p className={readingMode ? 'text-[14px]' : 'text-[12px]'} style={{ color: 'var(--app-text-secondary)' }}>Saved tips</p>
                 </div>
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--app-surface-secondary)' }}>
                   <MessageSquare className="w-5 h-5 mx-auto mb-1" style={{ color: 'var(--app-text-accent)' }} />
-                  <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
+                  <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
                     {contributionCount ?? '—'}
                   </p>
-                  <p className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>Contributions</p>
+                  <p className={readingMode ? 'text-[14px]' : 'text-[12px]'} style={{ color: 'var(--app-text-secondary)' }}>Contributions</p>
                 </div>
               </div>
             </div>

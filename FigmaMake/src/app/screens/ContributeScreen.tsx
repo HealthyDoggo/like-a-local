@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function ContributeScreen() {
   const navigate = useNavigate();
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, readingMode } = useSettings();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { tips: userTips, loading, error } = useMyTips();
 
@@ -33,7 +33,7 @@ export function ContributeScreen() {
     return (
       <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-          <h1 className="text-[24px] leading-[28px] mb-6" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
+          <h1 className={`${readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'} mb-6`} style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
             Your city insights
           </h1>
           <LoadingSpinner />
@@ -47,7 +47,7 @@ export function ContributeScreen() {
     return (
       <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-          <h1 className="text-[24px] leading-[28px] mb-6" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
+          <h1 className={`${readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'} mb-6`} style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
             Your city insights
           </h1>
           <ErrorMessage message={error} />
@@ -65,10 +65,10 @@ export function ContributeScreen() {
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1 className="text-[24px] leading-[28px] mb-2" style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
+          <h1 className={`${readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'} mb-2`} style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
             Your city insights
           </h1>
-          <p className="text-[15px] leading-[22px]" style={{ color: 'var(--app-text-secondary)' }}>
+          <p className={readingMode ? 'text-[18px] leading-[26px]' : 'text-[15px] leading-[22px]'} style={{ color: 'var(--app-text-secondary)' }}>
             Tips you've shared with visitors
           </p>
         </motion.div>
@@ -84,28 +84,28 @@ export function ContributeScreen() {
             <div className="flex items-center justify-center mb-1">
               <MessageCircle className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
             </div>
-            <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
+            <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
               {userTips.length}
             </p>
-            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>Tips shared</p>
+            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Tips shared</p>
           </div>
 
           <div className="rounded-xl p-4 shadow-sm text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
             <div className="flex items-center justify-center mb-1">
               <MapPin className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
             </div>
-            <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>
+            <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
               {uniqueCities.size}
             </p>
-            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>Cities covered</p>
+            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Cities covered</p>
           </div>
 
           <div className="rounded-xl p-4 shadow-sm text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
             <div className="flex items-center justify-center mb-1">
               <Heart className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
             </div>
-            <p className="text-[20px] font-semibold" style={{ color: 'var(--app-text-primary)' }}>42</p>
-            <p className="text-[11px]" style={{ color: 'var(--app-text-secondary)' }}>Saved by visitors</p>
+            <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>42</p>
+            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Saved by visitors</p>
           </div>
         </motion.div>
 
@@ -117,11 +117,11 @@ export function ContributeScreen() {
           className="mb-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[18px] leading-[24px]" style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
+            <h2 className={readingMode ? 'text-[22px] leading-[28px]' : 'text-[18px] leading-[24px]'} style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
               Your tips
             </h2>
             {userTips.length > 0 && userTips.length !== processedCount && (
-              <span className="text-[12px]" style={{ color: 'var(--app-text-secondary)' }}>
+              <span className={readingMode ? 'text-[14px]' : 'text-[12px]'} style={{ color: 'var(--app-text-secondary)' }}>
                 {processedCount}/{userTips.length} live
               </span>
             )}
@@ -144,7 +144,7 @@ export function ContributeScreen() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <span
-                      className="text-[11px] px-2 py-1 rounded-full"
+                      className={`${readingMode ? 'text-[13px]' : 'text-[11px]'} px-2 py-1 rounded-full`}
                       style={{ backgroundColor: 'var(--app-surface-accent)', color: 'var(--app-text-accent)', fontWeight: 500 }}
                     >
                       {tip.location_name || 'General'}
@@ -155,17 +155,17 @@ export function ContributeScreen() {
                       ) : (
                         <Loader className="w-3.5 h-3.5" style={{ color: 'var(--app-text-secondary)' }} />
                       )}
-                      <span className="text-[11px]" style={{ color: tip.status === 'processed' ? 'var(--app-success)' : 'var(--app-text-secondary)' }}>
+                      <span className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: tip.status === 'processed' ? 'var(--app-success)' : 'var(--app-text-secondary)' }}>
                         {tip.status === 'processed' ? 'Live' : 'Pending'}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-[14px] leading-[20px]" style={{ color: 'var(--app-text-primary)' }}>
+                  <p className={readingMode ? 'text-[18px] leading-[26px]' : 'text-[14px] leading-[20px]'} style={{ color: 'var(--app-text-primary)' }}>
                     {tip.tip_text.length > 120 ? tip.tip_text.substring(0, 120) + '...' : tip.tip_text}
                   </p>
 
-                  <p className="text-[11px] mt-2" style={{ color: 'var(--app-text-secondary)' }}>
+                  <p className={`${readingMode ? 'text-[13px]' : 'text-[11px]'} mt-2`} style={{ color: 'var(--app-text-secondary)' }}>
                     {new Date(tip.submitted_at).toLocaleDateString()}
                   </p>
                 </motion.div>
