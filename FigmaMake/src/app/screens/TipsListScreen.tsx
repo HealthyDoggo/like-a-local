@@ -20,7 +20,7 @@ export function TipsListScreen() {
   const { tips: apiTips, loading, error } = usePromotedTips(city, country, categoryId, 100);
   const { toggleSave, isSaved } = useSavedTips();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, readingMode } = useSettings();
 
   // Map API response to UI format
   const tips = apiTips.map(tip => ({
@@ -57,12 +57,12 @@ export function TipsListScreen() {
             </button>
             <div>
               <h1
-                className="text-[24px] leading-[28px]"
+                className={readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'}
                 style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
               >
                 {category}
               </h1>
-              <p className="text-[13px]" style={{ color: 'var(--app-text-secondary)' }}>
+              <p className={readingMode ? 'text-[16px]' : 'text-[13px]'} style={{ color: 'var(--app-text-secondary)' }}>
                 {city}
               </p>
             </div>
@@ -92,12 +92,12 @@ export function TipsListScreen() {
             </button>
             <div>
               <h1
-                className="text-[24px] leading-[28px]"
+                className={readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'}
                 style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
               >
                 {category}
               </h1>
-              <p className="text-[13px]" style={{ color: 'var(--app-text-secondary)' }}>
+              <p className={readingMode ? 'text-[16px]' : 'text-[13px]'} style={{ color: 'var(--app-text-secondary)' }}>
                 {city}
               </p>
             </div>
@@ -126,12 +126,12 @@ export function TipsListScreen() {
           </button>
           <div>
             <h1
-              className="text-[24px] leading-[28px]"
+              className={readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'}
               style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
             >
               {category}
             </h1>
-            <p className="text-[13px]" style={{ color: 'var(--app-text-secondary)' }}>
+            <p className={readingMode ? 'text-[16px]' : 'text-[13px]'} style={{ color: 'var(--app-text-secondary)' }}>
               {city}
             </p>
           </div>

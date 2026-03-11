@@ -78,7 +78,7 @@ export function TipCard({
   };
 
   const truncatedText = text.length > 120 && !isExpanded ? text.substring(0, 120) + '...' : text;
-  const textSize = readingMode ? 'text-[17px] leading-[26px]' : 'text-[15px] leading-[22px]';
+  const textSize = readingMode ? 'text-[20px] leading-[30px]' : 'text-[15px] leading-[22px]';
   const spacing = readingMode ? 'p-5' : 'p-4';
 
   return (
@@ -91,8 +91,8 @@ export function TipCard({
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           {showCategory && (
-            <span 
-              className="text-[11px] px-2 py-1 rounded-full"
+            <span
+              className={`${readingMode ? 'text-[13px]' : 'text-[11px]'} px-2 py-1 rounded-full`}
               style={{ backgroundColor: 'var(--app-surface-accent)', color: 'var(--app-text-accent)', fontWeight: 500 }}
             >
               {category}
@@ -133,7 +133,7 @@ export function TipCard({
       </div>
 
       {title && (
-        <h3 className={`${readingMode ? 'text-[17px]' : 'text-[15px]'} font-semibold mb-2`} style={{ color: 'var(--app-text-primary)' }}>
+        <h3 className={`${readingMode ? 'text-[21px]' : 'text-[15px]'} font-semibold mb-2`} style={{ color: 'var(--app-text-primary)' }}>
           {title}
         </h3>
       )}
@@ -145,7 +145,7 @@ export function TipCard({
       />
 
       {supportingText && (
-        <p className={`${readingMode ? 'text-[15px] leading-[22px]' : 'text-[13px] leading-[18px]'} mt-2`} style={{ color: 'var(--app-text-secondary)' }}>
+        <p className={`${readingMode ? 'text-[17px] leading-[26px]' : 'text-[13px] leading-[18px]'} mt-2`} style={{ color: 'var(--app-text-secondary)' }}>
           {supportingText}
         </p>
       )}
@@ -153,7 +153,7 @@ export function TipCard({
       {text.length > 120 && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-[13px] mt-2"
+          className={`${readingMode ? 'text-[16px]' : 'text-[13px]'} mt-2`}
           style={{ color: 'var(--app-text-accent)', fontWeight: 500 }}
         >
           {isExpanded ? 'Show less' : 'Read more'}

@@ -86,12 +86,12 @@ export function SettingsScreen() {
         </div>
         <div className="flex-1">
           <h3
-            className="text-[15px] leading-[20px] mb-1"
+            className={`${readingMode ? 'text-[18px] leading-[26px]' : 'text-[15px] leading-[20px]'} mb-1`}
             style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}
           >
             {title}
           </h3>
-          <p className="text-[13px] leading-[18px]" style={{ color: 'var(--app-text-secondary)' }}>
+          <p className={readingMode ? 'text-[15px] leading-[22px]' : 'text-[13px] leading-[18px]'} style={{ color: 'var(--app-text-secondary)' }}>
             {description}
           </p>
         </div>
@@ -129,7 +129,7 @@ export function SettingsScreen() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h1
-            className="text-[24px] leading-[28px]"
+            className={readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'}
             style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
           >
             Settings
@@ -142,7 +142,7 @@ export function SettingsScreen() {
           transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
         >
           <h2
-            className="text-[13px] uppercase tracking-wider mb-4"
+            className={`${readingMode ? 'text-[15px]' : 'text-[13px]'} uppercase tracking-wider mb-4`}
             style={{ color: 'var(--app-text-secondary)', fontWeight: 600 }}
           >
             Accessibility
@@ -188,7 +188,7 @@ export function SettingsScreen() {
             transition={reducedMotion ? { duration: 0 } : { delay: 0.3 }}
             className="mt-6"
           >
-            <p className="text-[13px] leading-[20px] text-center px-4" style={{ color: 'var(--app-text-secondary)' }}>
+            <p className={`${readingMode ? 'text-[15px] leading-[24px]' : 'text-[13px] leading-[20px]'} text-center px-4`} style={{ color: 'var(--app-text-secondary)' }}>
               These settings help make the app more comfortable and accessible for everyone
             </p>
           </motion.div>

@@ -13,7 +13,7 @@ export function CityOverviewScreen() {
   const navigate = useNavigate();
   const city = location.state?.city || 'Tokyo';
   const country = location.state?.country || 'Japan';
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, readingMode } = useSettings();
 
   // Fetch categories and counts from backend
   const { categories, loading, error } = useCategories(city, country);
@@ -34,7 +34,7 @@ export function CityOverviewScreen() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h1
-            className="text-[24px] leading-[28px]"
+            className={readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'}
             style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
           >
             {city}
@@ -42,7 +42,7 @@ export function CityOverviewScreen() {
         </motion.div>
 
         <div className="mb-4">
-          <h2 className="text-[18px] leading-[24px] mb-4" style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
+          <h2 className={`${readingMode ? 'text-[22px] leading-[28px]' : 'text-[18px] leading-[24px]'} mb-4`} style={{ color: 'var(--app-text-primary)', fontWeight: 500 }}>
             Categories
           </h2>
         </div>

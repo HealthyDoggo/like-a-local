@@ -11,7 +11,7 @@ import { locationsService } from '@/services/api';
 export function SavedScreen() {
   const { getSavedTipsData, toggleSave, isSaved, updateSavedTipTexts } = useSavedTips();
   const [savedTipObjects, setSavedTipObjects] = useState<SavedTip[]>(getSavedTipsData());
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, readingMode } = useSettings();
   const { language } = useLanguage();
 
   // On mount or language change: translate and persist back to localStorage
@@ -64,12 +64,12 @@ export function SavedScreen() {
           className="mb-6"
         >
           <h1
-            className="text-[24px] leading-[28px] mb-2"
+            className={readingMode ? 'text-[28px] leading-[34px] mb-2' : 'text-[24px] leading-[28px] mb-2'}
             style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
           >
             Saved tips
           </h1>
-          <p className="text-[15px] leading-[22px]" style={{ color: 'var(--app-text-secondary)' }}>
+          <p className={readingMode ? 'text-[18px] leading-[26px]' : 'text-[15px] leading-[22px]'} style={{ color: 'var(--app-text-secondary)' }}>
             Tips you want to remember while traveling
           </p>
         </motion.div>
