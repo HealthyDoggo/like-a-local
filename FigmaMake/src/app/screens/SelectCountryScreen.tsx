@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Input } from '@/app/components/Input';
 import { ListItem } from '@/app/components/ListItem';
 import { useNavigate } from 'react-router';
+import { ArrowLeft } from 'lucide-react';
 import { useCountriesAndCities } from '@/hooks/useCountriesAndCities';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
@@ -51,12 +52,21 @@ export function SelectCountryScreen() {
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1
-            className="text-[24px] leading-[28px] mb-2"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-          >
-            Where are you local to?
-          </h1>
+          <div className="flex items-center mb-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2"
+              style={{ color: 'var(--app-text-accent)' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1
+              className="text-[24px] leading-[28px] ml-2"
+              style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+            >
+              Where are you local to?
+            </h1>
+          </div>
           <p className="text-[14px] leading-[20px]" style={{ color: 'var(--app-text-secondary)' }}>
             Select your country to start sharing local knowledge
           </p>
@@ -74,12 +84,21 @@ export function SelectCountryScreen() {
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1
-            className="text-[24px] leading-[28px] mb-2"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-          >
-            Where are you local to?
-          </h1>
+          <div className="flex items-center mb-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2"
+              style={{ color: 'var(--app-text-accent)' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1
+              className="text-[24px] leading-[28px] ml-2"
+              style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+            >
+              Where are you local to?
+            </h1>
+          </div>
           <p className="text-[14px] leading-[20px]" style={{ color: 'var(--app-text-secondary)' }}>
             Select your country to start sharing local knowledge
           </p>

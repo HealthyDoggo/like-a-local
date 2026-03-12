@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Home, MapPin, Heart, User } from 'lucide-react';
+import { Home, Plus, Heart, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { useSettings } from '@/hooks/useSettings';
 
@@ -12,7 +12,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: 'Explore', path: '/home' },
   { icon: Heart, label: 'Saved', path: '/saved' },
-  { icon: MapPin, label: 'Contribute', path: '/contribute' },
+  { icon: Plus, label: 'Contribute', path: '/contribute' },
   { icon: User, label: 'Profile', path: '/profile' },
 ];
 

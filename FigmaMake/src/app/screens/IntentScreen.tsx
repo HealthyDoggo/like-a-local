@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
-import { MapPin, Heart } from 'lucide-react';
+import { ArrowLeft, MapPin, Heart } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 
 export function IntentScreen() {
@@ -24,12 +24,21 @@ export function IntentScreen() {
           transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
           className="mb-12"
         >
-          <h1
-            className="text-[28px] leading-[34px] mb-3"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 700 }}
-          >
-            What would you like to do today?
-          </h1>
+          <div className="flex items-center mb-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2"
+              style={{ color: 'var(--app-text-accent)' }}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1
+              className="text-[28px] leading-[34px] ml-2"
+              style={{ color: 'var(--app-text-primary)', fontWeight: 700 }}
+            >
+              What would you like to do today?
+            </h1>
+          </div>
           <p className="text-[15px] leading-[22px]" style={{ color: 'var(--app-text-secondary)' }}>
             You can always do both later
           </p>

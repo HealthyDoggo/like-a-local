@@ -65,12 +65,26 @@ export function ContributeScreen() {
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1 className={`${readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'} mb-2`} style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
-            Your city insights
-          </h1>
-          <p className={readingMode ? 'text-[18px] leading-[26px]' : 'text-[15px] leading-[22px]'} style={{ color: 'var(--app-text-secondary)' }}>
-            Tips you've shared with visitors
-          </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className={`${readingMode ? 'text-[28px] leading-[34px]' : 'text-[24px] leading-[28px]'} mb-2`} style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}>
+                Your city insights
+              </h1>
+              <p className={readingMode ? 'text-[18px] leading-[26px]' : 'text-[15px] leading-[22px]'} style={{ color: 'var(--app-text-secondary)' }}>
+                Tips you've shared with visitors
+              </p>
+            </div>
+            <motion.button
+              onClick={() => navigate('/onboarding/country')}
+              className="px-3 py-3 rounded-xl text-white"
+              style={{ backgroundColor: 'var(--app-text-accent)' }}
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ boxShadow: '0 4px 12px rgba(69, 123, 157, 0.3)' }}
+              aria-label="Add a new tip"
+            >
+              <Plus className="w-5 h-5" />
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Stats */}

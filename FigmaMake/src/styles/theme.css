@@ -189,10 +189,14 @@
     @apply bg-background text-foreground;
   }
 
-  html, body {
+  html {
     overflow-x: hidden;
+  }
+
+  body {
     width: 100%;
-    position: fixed;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
