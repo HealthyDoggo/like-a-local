@@ -22,7 +22,7 @@ from typing import List
 from sqlalchemy.orm import Session
 from backend.database.connection import SessionLocal
 from backend.database.models import Location, Tip, Category
-from backend.services.gemini_client import get_gemini_client
+from backend.services.gemini_client import gemini_generate
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,7 +129,6 @@ def seed_llm_tips(
         print(f"Generating tips for {len(locations)} location(s), "
               f"{tips_per_location} tips each...\n")
 
-        client = get_gemini_client()
         total_created = 0
 
         for loc in locations:
@@ -142,10 +141,7 @@ def seed_llm_tips(
             )
 
             try:
-                response = client.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=prompt,
-                )
+                response = gemini_generate(model=GEMINI_MODEL, contents=prompt)
                 tips_data = _parse_tips_response(response.text)
             except Exception as e:
                 logger.error(f"Failed to generate tips for {loc.name}: {e}")

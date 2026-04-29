@@ -4,7 +4,7 @@ import logging
 from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session
 from backend.database.models import Category
-from backend.services.gemini_client import get_gemini_client
+from backend.services.gemini_client import gemini_generate
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +53,10 @@ Tip: "{tip_text}"
         if not self.categories:
             raise ValueError("Categories not loaded. Call load_categories() first.")
 
-        client = get_gemini_client()
         prompt = self._build_prompt(tip_text)
 
         try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-            )
+            response = gemini_generate(model=GEMINI_MODEL, contents=prompt)
             text = response.text.strip()
             # Strip markdown fences if the model adds them anyway
             if text.startswith("```"):
