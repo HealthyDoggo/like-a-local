@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Button } from '@/app/components/Button';
 import { useNavigate } from 'react-router';
-import { MapPin, MessageCircle, Heart, Plus, CheckCircle, Loader } from 'lucide-react';
+import { MapPin, MessageCircle, Plus, CheckCircle, Loader } from 'lucide-react';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
@@ -116,10 +116,12 @@ export function ContributeScreen() {
 
           <div className="rounded-xl p-4 shadow-sm text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
             <div className="flex items-center justify-center mb-1">
-              <Heart className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
+              <CheckCircle className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
             </div>
-            <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>42</p>
-            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Saved by visitors</p>
+            <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
+              {processedCount}
+            </p>
+            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Tips live</p>
           </div>
         </motion.div>
 

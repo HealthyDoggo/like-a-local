@@ -6,6 +6,7 @@ import { BottomNav } from '@/app/components/BottomNav';
 import { useSettings } from '@/hooks/useSettings';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSavedTips } from '@/hooks/useSavedTips';
 import { tipsService } from '@/services/api';
 
 export function ProfileScreen() {
@@ -13,6 +14,7 @@ export function ProfileScreen() {
   const { isAuthenticated: isLoggedIn, user } = useAuth();
   const { reducedMotion, readingMode } = useSettings();
   const { language, availableLanguages } = useLanguage();
+  const { savedTips } = useSavedTips();
   const currentLanguage = availableLanguages.find(l => l.code === language);
   const [contributionCount, setContributionCount] = useState<number | null>(null);
 
@@ -140,7 +142,7 @@ export function ProfileScreen() {
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--app-surface-secondary)' }}>
                   <Heart className="w-5 h-5 mx-auto mb-1" style={{ color: 'var(--app-text-accent)' }} />
                   <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
-                    {JSON.parse(localStorage.getItem('savedTips') || '[]').length}
+                    {savedTips.length}
                   </p>
                   <p className={readingMode ? 'text-[14px]' : 'text-[12px]'} style={{ color: 'var(--app-text-secondary)' }}>Saved tips</p>
                 </div>

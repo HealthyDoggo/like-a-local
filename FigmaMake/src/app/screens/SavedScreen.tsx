@@ -101,23 +101,28 @@ export function SavedScreen() {
             animate={reducedMotion ? false : { opacity: 1 }}
             transition={reducedMotion ? { duration: 0 } : { delay: 0.1 }}
           >
-            {savedTipObjects.map((tip, index) => (
-              <motion.div
-                key={tip.id}
-                initial={reducedMotion ? false : { opacity: 0, y: 20 }}
-                animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-                transition={reducedMotion ? { duration: 0 } : { delay: index * 0.05 }}
-              >
-                <TipCard
-                  id={tip.id}
-                  category={tip.category}
-                  text={tip.text}
-                  supportingText={tip.supportingText}
-                  isSaved={isSaved(tip.id)}
-                  onSave={handleUnsave}
-                />
-              </motion.div>
-            ))}
+            {savedTipObjects.map((tip, index) => {
+              const locationText = tip.city && tip.country ? `${tip.city}, ${tip.country}` : null;
+              const supportingText = [locationText, tip.supportingText].filter(Boolean).join(' · ') || undefined;
+
+              return (
+                <motion.div
+                  key={tip.id}
+                  initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+                  animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+                  transition={reducedMotion ? { duration: 0 } : { delay: index * 0.05 }}
+                >
+                  <TipCard
+                    id={tip.id}
+                    category={tip.category}
+                    text={tip.text}
+                    supportingText={supportingText}
+                    isSaved={isSaved(tip.id)}
+                    onSave={handleUnsave}
+                  />
+                </motion.div>
+              );
+            })}
           </motion.div>
         )}
       </div>
