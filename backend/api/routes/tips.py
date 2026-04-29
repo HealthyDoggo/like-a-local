@@ -1,6 +1,6 @@
 """Tip API endpoints"""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from pydantic import BaseModel, Field
@@ -8,8 +8,23 @@ from datetime import datetime
 
 from backend.database.models import Tip, Location, TipTranslation, User
 from backend.api.dependencies import get_database, get_current_user_optional, get_current_user
+from backend.services.demo_mode import is_demo_mode
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
+
+
+def _demo_process_pending():
+    """Process all pending tips and run promotion (demo mode background task)."""
+    from backend.database.connection import SessionLocal
+    from backend.jobs.nightly_processor import process_pending_tips, run_promotion
+
+    db = SessionLocal()
+    try:
+        stats, processed_tips = process_pending_tips(db, wake_pc=False)
+        if processed_tips:
+            run_promotion(db, new_tips=processed_tips)
+    finally:
+        db.close()
 
 
 class TipCreate(BaseModel):
@@ -45,6 +60,7 @@ class TipResponse(BaseModel):
 @router.post("", response_model=TipResponse, status_code=201)
 async def create_tip(
     tip: TipCreate,
+    background_tasks: BackgroundTasks,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_database)
 ):
@@ -90,7 +106,10 @@ async def create_tip(
         if location:
             response.location_name = location.name
             response.location_country = location.country
-    
+
+    if is_demo_mode():
+        background_tasks.add_task(_demo_process_pending)
+
     return response
 
 
