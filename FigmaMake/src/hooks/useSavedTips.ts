@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { savesService } from '@/services/api';
+import { getDeviceId } from '@/utils/deviceId';
 
 const SAVED_TIPS_KEY = 'savedTips';
 const SAVED_TIPS_DATA_KEY = 'savedTipsData';
@@ -46,6 +48,7 @@ export function useSavedTips() {
             [tipId]: tipData
           }));
         }
+        savesService.recordSave(parseInt(tipId), getDeviceId()).catch(() => {});
         return [...prev, tipId];
       }
     });

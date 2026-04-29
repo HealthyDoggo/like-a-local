@@ -3,11 +3,12 @@ from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 from sqlalchemy import and_
-from backend.database.models import Location, Tip, TipPromotion, TipTranslation
+from backend.database.models import Location, Tip, TipPromotion, TipTranslation, TipSave
 from backend.api.dependencies import get_database
 from backend.api.routes.tips import TipResponse
 from backend.api.routes.categories import UNCATEGORIZED_ID
@@ -352,4 +353,50 @@ def get_promoted_tips_by_location_name(
         results.append(response)
 
     return results
+
+
+# ── Save tracking ──────────────────────────────────────────────────
+
+
+class SaveRequest(BaseModel):
+    saver_id: str = Field(..., min_length=1, max_length=64)
+
+
+@promoted_router.post("/{promotion_id}/save", status_code=201)
+def record_save(
+    promotion_id: int,
+    body: SaveRequest,
+    db: Session = Depends(get_database),
+):
+    """Record that a device saved a promoted tip. Idempotent — duplicates are ignored."""
+    promo = db.query(TipPromotion).filter(TipPromotion.id == promotion_id).first()
+    if not promo:
+        raise HTTPException(status_code=404, detail="Promoted tip not found")
+
+    try:
+        db.add(TipSave(promoted_tip_id=promotion_id, saver_id=body.saver_id))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+    return {"ok": True}
+
+
+@promoted_router.get("/save-counts")
+def get_save_counts(
+    tip_ids: str = Query(..., description="Comma-separated promoted tip IDs"),
+    db: Session = Depends(get_database),
+) -> Dict[str, int]:
+    """Get save counts for a set of promoted tips."""
+    ids = [int(x) for x in tip_ids.split(",") if x.strip().isdigit()]
+    if not ids:
+        return {}
+
+    rows = (
+        db.query(TipSave.promoted_tip_id, func.count(TipSave.id))
+        .filter(TipSave.promoted_tip_id.in_(ids))
+        .group_by(TipSave.promoted_tip_id)
+        .all()
+    )
+    return {str(pid): cnt for pid, cnt in rows}
 

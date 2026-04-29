@@ -143,6 +143,21 @@ class TipTranslation(Base):
     )
 
 
+class TipSave(Base):
+    """Tracks unique saves on promoted tips for aggregate counts."""
+    __tablename__ = "tip_saves"
+
+    id = Column(Integer, primary_key=True, index=True)
+    promoted_tip_id = Column(Integer, ForeignKey("tip_promotions.id", ondelete="CASCADE"), nullable=False)
+    saver_id = Column(String(64), nullable=False)
+    saved_at = Column(TIMESTAMP, server_default=func.now())
+
+    __table_args__ = (
+        Index('idx_tip_save_unique', 'promoted_tip_id', 'saver_id', unique=True),
+        Index('idx_tip_save_promoted', 'promoted_tip_id'),
+    )
+
+
 class Category(Base):
     """Category model for tip classification"""
     __tablename__ = "categories"

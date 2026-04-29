@@ -7,6 +7,12 @@ import {
   CountriesCitiesResponse,
 } from '@/types/api.types';
 
+export const savesService = {
+  async recordSave(promotionId: number, saverId: string): Promise<void> {
+    await apiClient.post(`${ENDPOINTS.PROMOTED_TIPS}/${promotionId}/save`, { saver_id: saverId });
+  },
+};
+
 export const locationsService = {
   async getAll(): Promise<LocationResponse[]> {
     return apiClient.get<LocationResponse[]>(ENDPOINTS.LOCATIONS);

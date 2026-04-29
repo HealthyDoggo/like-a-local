@@ -2,11 +2,11 @@
 from typing import List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from pydantic import BaseModel, Field
 from datetime import datetime
 
-from backend.database.models import Tip, Location, TipTranslation, User
+from backend.database.models import Tip, Location, TipTranslation, TipPromotion, TipSave, User
 from backend.api.dependencies import get_database, get_current_user_optional, get_current_user
 from backend.services.demo_mode import is_demo_mode
 
@@ -213,6 +213,26 @@ async def get_my_tips(
         results.append(response)
 
     return results
+
+
+@router.get("/me/save-count")
+def get_my_save_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_database),
+):
+    """Total number of unique saves across promoted tips sourced from this user's contributions."""
+    user_tip_ids = db.query(Tip.id).filter(Tip.user_id == current_user.id).subquery()
+    promo_ids = (
+        db.query(TipPromotion.id)
+        .filter(TipPromotion.source_tip_id.in_(user_tip_ids))
+        .subquery()
+    )
+    count = (
+        db.query(func.count(TipSave.id))
+        .filter(TipSave.promoted_tip_id.in_(promo_ids))
+        .scalar()
+    )
+    return {"save_count": count or 0}
 
 
 @router.get("/{tip_id}", response_model=TipResponse)

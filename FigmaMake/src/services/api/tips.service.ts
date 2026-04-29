@@ -14,4 +14,9 @@ export const tipsService = {
   async getMyTips(language?: string): Promise<TipResponse[]> {
     return apiClient.get<TipResponse[]>(`${ENDPOINTS.TIPS}/me`, language ? { language } : undefined);
   },
+
+  async getMySaveCount(): Promise<number> {
+    const res = await apiClient.get<{ save_count: number }>(`${ENDPOINTS.TIPS}/me/save-count`);
+    return res.save_count;
+  },
 };

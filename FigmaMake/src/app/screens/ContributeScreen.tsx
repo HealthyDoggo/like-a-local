@@ -1,26 +1,33 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Button } from '@/app/components/Button';
 import { useNavigate } from 'react-router';
-import { MapPin, MessageCircle, Plus, CheckCircle, Loader } from 'lucide-react';
+import { MapPin, MessageCircle, Heart, Plus, CheckCircle, Loader } from 'lucide-react';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { ErrorMessage } from '@/app/components/ErrorMessage';
 import { useSettings } from '@/hooks/useSettings';
 import { useMyTips } from '@/hooks/useTips';
 import { useAuth } from '@/contexts/AuthContext';
+import { tipsService } from '@/services/api';
 
 export function ContributeScreen() {
   const navigate = useNavigate();
   const { reducedMotion, readingMode } = useSettings();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { tips: userTips, loading, error } = useMyTips();
+  const [saveCount, setSaveCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/sign-in', { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    tipsService.getMySaveCount().then(setSaveCount).catch(() => setSaveCount(0));
+  }, [isAuthenticated]);
 
   if (authLoading || (!isAuthenticated && !authLoading)) {
     return null;
@@ -116,12 +123,12 @@ export function ContributeScreen() {
 
           <div className="rounded-xl p-4 shadow-sm text-center" style={{ backgroundColor: 'var(--app-surface)' }}>
             <div className="flex items-center justify-center mb-1">
-              <CheckCircle className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
+              <Heart className="w-5 h-5" style={{ color: 'var(--app-text-accent)' }} />
             </div>
             <p className={`${readingMode ? 'text-[24px]' : 'text-[20px]'} font-semibold`} style={{ color: 'var(--app-text-primary)' }}>
-              {processedCount}
+              {saveCount ?? '—'}
             </p>
-            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Tips live</p>
+            <p className={readingMode ? 'text-[13px]' : 'text-[11px]'} style={{ color: 'var(--app-text-secondary)' }}>Saved by visitors</p>
           </div>
         </motion.div>
 
