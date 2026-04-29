@@ -2,6 +2,7 @@
 import logging
 import os
 import random
+import re
 import time
 from dotenv import load_dotenv
 
@@ -18,6 +19,14 @@ _BASE_DELAY = 2.0
 def _is_retryable(exc: Exception) -> bool:
     msg = str(exc)
     return any(code in msg for code in _RETRYABLE_CODES) or isinstance(exc, (ConnectionError, TimeoutError))
+
+
+def _parse_retry_delay(exc: Exception) -> float | None:
+    """Extract retryDelay (e.g. '50s') from the error message if present."""
+    match = re.search(r"['\"]retryDelay['\"]\s*:\s*['\"](\d+(?:\.\d+)?)s['\"]", str(exc))
+    if match:
+        return float(match.group(1))
+    return None
 
 
 def get_gemini_client():
@@ -46,7 +55,9 @@ def gemini_generate(model: str, contents, max_retries: int = _MAX_RETRIES):
             return client.models.generate_content(model=model, contents=contents)
         except Exception as e:
             if attempt < max_retries and _is_retryable(e):
-                delay = _BASE_DELAY * (2 ** attempt) + random.uniform(0, 1)
+                server_delay = _parse_retry_delay(e)
+                backoff_delay = _BASE_DELAY * (2 ** attempt) + random.uniform(0, 1)
+                delay = max(server_delay or 0, backoff_delay)
                 logger.warning(f"Gemini request failed (attempt {attempt + 1}/{max_retries + 1}), retrying in {delay:.1f}s: {e}")
                 time.sleep(delay)
             else:
