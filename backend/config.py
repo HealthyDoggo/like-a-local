@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     similarity_threshold: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.85"))  # Cosine similarity threshold for clustering
     min_mentions: int = int(os.getenv("MIN_MENTIONS", "1"))  # Minimum mentions to promote a tip
 
+    # Classification method: "embedding" (cosine similarity) or "llm" (Gemini)
+    classification_method: str = os.getenv("CLASSIFICATION_METHOD", "embedding")
+
     # JWT configuration
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-in-production-use-openssl-rand-base64-32")
     jwt_algorithm: str = "HS256"
