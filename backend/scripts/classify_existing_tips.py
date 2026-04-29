@@ -79,12 +79,30 @@ def classify_existing_tips(batch_size=100, method=None, force=False):
             if not batch:
                 break
 
-            for tip in batch:
-                try:
-                    if use_llm:
-                        text = tip.translated_text or tip.tip_text
-                        category_id, confidence = classifier.classify_tip(text)
+            if use_llm:
+                batch_input = [(t.id, t.translated_text or t.tip_text) for t in batch]
+                batch_results = classifier.classify_batch(batch_input)
+                tip_map = {t.id: t for t in batch}
+                for tip_id, category_id, confidence in batch_results:
+                    tip = tip_map[tip_id]
+                    tip.category_assigned_at = datetime.utcnow()
+                    if category_id and classifier.should_assign_category(confidence):
+                        tip.category_id = category_id
+                        tip.category_confidence = confidence
+                        classified += 1
+                        logger.info(
+                            f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
+                            f"{category_id} (confidence: {confidence:.3f})"
+                        )
                     else:
+                        logger.info(
+                            f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
+                            f"{category_id} (confidence: {confidence:.3f} too low, not assigned)"
+                        )
+                processed += len(batch)
+            else:
+                for tip in batch:
+                    try:
                         embedding_obj = db.query(Embedding).filter(
                             Embedding.tip_id == tip.id
                         ).first()
@@ -96,31 +114,18 @@ def classify_existing_tips(batch_size=100, method=None, force=False):
                             return_details=True
                         )
 
-                    tip.category_assigned_at = datetime.utcnow()
+                        tip.category_assigned_at = datetime.utcnow()
 
-                    if category_id and classifier.should_assign_category(confidence):
-                        tip.category_id = category_id
-                        tip.category_confidence = confidence
-                        classified += 1
-
-                        if use_llm:
-                            logger.info(
-                                f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
-                                f"{category_id} (confidence: {confidence:.3f})"
-                            )
-                        else:
+                        if classifier.should_assign_category(confidence):
+                            tip.category_id = category_id
+                            tip.category_confidence = confidence
+                            classified += 1
                             category = next((c for c in classifier.categories if c.id == category_id), None)
                             matching_phrase = category.description[phrase_idx] if category else "unknown"
                             logger.info(
                                 f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
                                 f"{category_id} (confidence: {confidence:.3f}, "
                                 f"matched phrase: '{matching_phrase}')"
-                            )
-                    else:
-                        if use_llm:
-                            logger.info(
-                                f"Tip {tip.id}: '{tip.tip_text[:60]}...' -> "
-                                f"{category_id} (confidence: {confidence:.3f} too low, not assigned)"
                             )
                         else:
                             category = next((c for c in classifier.categories if c.id == category_id), None)
@@ -130,10 +135,10 @@ def classify_existing_tips(batch_size=100, method=None, force=False):
                                 f"{category_id} (confidence: {confidence:.3f} too low, "
                                 f"matched phrase: '{matching_phrase}', not assigned)"
                             )
-                except Exception as e:
-                    logger.error(f"Error classifying tip {tip.id}: {e}")
+                    except Exception as e:
+                        logger.error(f"Error classifying tip {tip.id}: {e}")
 
-                processed += 1
+                    processed += 1
 
             db.commit()
             logger.info(f"Progress: {processed}/{unclassified_count} processed, {classified} classified")

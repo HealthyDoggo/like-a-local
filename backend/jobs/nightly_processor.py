@@ -232,27 +232,34 @@ def process_pending_tips(
             classifier = get_category_classifier()
         classifier.load_categories(db)
 
+        tips_to_classify = [t for t in all_processed_tips if not t.category_manual]
         classified_count = 0
-        for tip in all_processed_tips:
-            if tip.category_manual:
-                continue
-            try:
-                if use_llm:
-                    text = tip.translated_text or tip.tip_text
-                    category_id, confidence = classifier.classify_tip(text)
-                else:
-                    embedding_obj = db.query(Embedding).filter(Embedding.tip_id == tip.id).first()
-                    if not embedding_obj:
-                        continue
-                    category_id, confidence = classifier.classify_tip(embedding_obj.embedding)
 
+        if use_llm:
+            batch_input = [(t.id, t.translated_text or t.tip_text) for t in tips_to_classify]
+            batch_results = classifier.classify_batch(batch_input)
+            tip_map = {t.id: t for t in tips_to_classify}
+            for tip_id, category_id, confidence in batch_results:
+                tip = tip_map[tip_id]
                 if category_id and classifier.should_assign_category(confidence):
                     tip.category_id = category_id
                     tip.category_confidence = confidence
                     tip.category_assigned_at = datetime.utcnow()
                     classified_count += 1
-            except Exception as e:
-                logger.error(f"Error classifying tip {tip.id}: {e}")
+        else:
+            for tip in tips_to_classify:
+                try:
+                    embedding_obj = db.query(Embedding).filter(Embedding.tip_id == tip.id).first()
+                    if not embedding_obj:
+                        continue
+                    category_id, confidence = classifier.classify_tip(embedding_obj.embedding)
+                    if category_id and classifier.should_assign_category(confidence):
+                        tip.category_id = category_id
+                        tip.category_confidence = confidence
+                        tip.category_assigned_at = datetime.utcnow()
+                        classified_count += 1
+                except Exception as e:
+                    logger.error(f"Error classifying tip {tip.id}: {e}")
 
         db.commit()
         stats["classified"] = classified_count
