@@ -157,39 +157,25 @@ def classify_existing_tips(batch_size=100, method=None, force=False):
 
 
 def classify_promoted_tips(db):
-    """Classify promoted tips based on most common category in their source tips"""
+    """Classify promoted tips using their source tip's category."""
     logger.info("\nClassifying promoted tips...")
 
-    # Get all promotions without categories
     promotions = db.query(TipPromotion).filter(
         TipPromotion.category_id.is_(None)
     ).all()
 
     logger.info(f"Found {len(promotions)} unclassified promotions")
 
+    source_tip_ids = [p.source_tip_id for p in promotions if p.source_tip_id]
+    source_tips = {
+        t.id: t for t in db.query(Tip).filter(Tip.id.in_(source_tip_ids)).all()
+    } if source_tip_ids else {}
+
     classified = 0
     for promotion in promotions:
-        # Find tips similar to this promotion (by location and text similarity)
-        # For simplicity, we'll use tips at the same location that match closely
-        similar_tips = db.query(Tip).filter(
-            Tip.location_id == promotion.location_id,
-            Tip.status == "processed",
-            Tip.category_id.isnot(None)
-        ).all()
-
-        if not similar_tips:
-            continue
-
-        # Count categories
-        category_counts = {}
-        for tip in similar_tips:
-            if tip.category_id:
-                category_counts[tip.category_id] = category_counts.get(tip.category_id, 0) + 1
-
-        # Assign most common category
-        if category_counts:
-            most_common = max(category_counts.items(), key=lambda x: x[1])[0]
-            promotion.category_id = most_common
+        source = source_tips.get(promotion.source_tip_id)
+        if source and source.category_id:
+            promotion.category_id = source.category_id
             classified += 1
 
     db.commit()

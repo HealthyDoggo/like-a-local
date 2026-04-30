@@ -6,16 +6,19 @@ that a local would actually share with a visitor. Tips are inserted as
 status='pending' so they flow through the normal nightly processing pipeline
 (translation, embedding, classification, promotion).
 
+Locations are processed in batches so multiple cities are sent in a single
+Gemini call, reducing API round-trips and latency.
+
 Usage:
     python -m backend.scripts.seed_llm_tips --confirm
     python -m backend.scripts.seed_llm_tips --confirm --locations "Tokyo,Paris"
     python -m backend.scripts.seed_llm_tips --confirm --tips-per-location 15
     python -m backend.scripts.seed_llm_tips --confirm --max-locations 5
+    python -m backend.scripts.seed_llm_tips --confirm --batch-size 3
 """
 import argparse
 import json
 import logging
-import sys
 import time
 from typing import List
 
@@ -31,6 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_BATCH_SIZE = 5
 
 SUPPORTED_LANGUAGES = [
     ("en", "English"),
@@ -51,62 +55,76 @@ SUPPORTED_LANGUAGES = [
 ]
 
 
-def _build_prompt(
-    city: str,
-    country: str,
+def _build_batch_prompt(
+    locations: List[Location],
     categories: List[Category],
     tips_per_location: int,
     languages: List[tuple],
 ) -> str:
-    cat_lines = []
-    for cat in categories:
-        cat_lines.append(f"- {cat.title}")
+    cat_lines = [f"- {cat.title}" for cat in categories]
     categories_block = "\n".join(cat_lines)
 
     lang_examples = ", ".join(
         f"{name} ({code})" for code, name in languages[:6]
     )
 
-    return f"""You are a knowledgeable local guide for {city}, {country}.
+    location_lines = []
+    for loc in locations:
+        location_lines.append(f'  {{"id": {loc.id}, "city": "{loc.name}", "country": "{loc.country}"}}')
+    locations_block = ",\n".join(location_lines)
 
-Generate exactly {tips_per_location} realistic travel tips that a local resident would share with a first-time visitor to {city}. Each tip should be specific to {city} — mention real place names, neighbourhoods, customs, or practical details whenever possible.
+    return f"""You are a knowledgeable local travel guide.
+
+For EACH location below, generate exactly {tips_per_location} realistic travel tips that a local resident would share with a first-time visitor. Each tip must be specific to that city — mention real place names, neighbourhoods, customs, or practical details whenever possible.
 
 Vary the tips across these categories (you don't need to cover every one):
 {categories_block}
 
-Write most tips in English, but write some tips in other languages that would be natural for {city}. For example, tips for Tokyo could be in Japanese, tips for Paris in French, etc. Available languages: {lang_examples}, and others.
+Write most tips in English, but write some tips in other languages that would be natural for that city. For example, tips for Tokyo could be in Japanese, tips for Paris in French, etc. Available languages: {lang_examples}, and others.
 
 For each tip, pick a language that feels authentic — a local giving advice in their own tongue.
 
-Respond with ONLY a JSON array, no markdown fences:
+Locations:
 [
-  {{"tip_text": "...", "language": "en"}},
-  {{"tip_text": "...", "language": "ja"}},
+{locations_block}
+]
+
+Respond with ONLY a JSON array (one entry per location, same order), no markdown fences:
+[
+  {{
+    "id": <location_id>,
+    "tips": [
+      {{"tip_text": "...", "language": "en"}},
+      {{"tip_text": "...", "language": "ja"}},
+      ...
+    ]
+  }},
   ...
 ]
 
 Rules:
-- Each tip should be 1-2 sentences, practical, and specific to {city}
+- Generate exactly {tips_per_location} tips per location
+- Each tip should be 1-2 sentences, practical, and specific to that city
 - Avoid generic advice that applies to any city
 - Include a mix of well-known and insider/lesser-known tips
 - For non-English tips, write them naturally in that language (not a translation of English)
 """
 
 
-def _parse_tips_response(text: str) -> list:
+def _strip_fences(text: str) -> str:
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else text[3:]
     if text.endswith("```"):
         text = text[:-3]
-    text = text.strip()
-    return json.loads(text)
+    return text.strip()
 
 
 def seed_llm_tips(
     locations_filter: List[str] | None = None,
     tips_per_location: int = 10,
     max_locations: int | None = None,
+    batch_size: int = DEFAULT_BATCH_SIZE,
 ):
     db: Session = SessionLocal()
     try:
@@ -126,15 +144,18 @@ def seed_llm_tips(
             print("No locations found in the database.")
             return
 
-        print(f"Generating tips for {len(locations)} location(s), "
+        batches = [locations[i:i + batch_size] for i in range(0, len(locations), batch_size)]
+        print(f"Generating tips for {len(locations)} location(s) in {len(batches)} batch(es), "
               f"{tips_per_location} tips each...\n")
 
         total_created = 0
 
-        for loc in locations:
-            prompt = _build_prompt(
-                city=loc.name,
-                country=loc.country,
+        for batch_idx, batch in enumerate(batches, start=1):
+            batch_names = ", ".join(loc.name for loc in batch)
+            print(f"  Batch {batch_idx}/{len(batches)}: {batch_names}")
+
+            prompt = _build_batch_prompt(
+                locations=batch,
                 categories=categories,
                 tips_per_location=tips_per_location,
                 languages=SUPPORTED_LANGUAGES,
@@ -142,32 +163,50 @@ def seed_llm_tips(
 
             try:
                 response = gemini_generate(model=GEMINI_MODEL, contents=prompt)
-                tips_data = _parse_tips_response(response.text)
+                items = json.loads(_strip_fences(response.text))
             except Exception as e:
-                logger.error(f"Failed to generate tips for {loc.name}: {e}")
+                logger.error(f"Failed to generate tips for batch {batch_idx}: {e}")
                 continue
 
-            loc_count = 0
-            for item in tips_data:
-                tip_text = item.get("tip_text", "").strip()
-                language = item.get("language", "en").strip()
-                if not tip_text:
+            loc_map = {loc.id: loc for loc in batch}
+            batch_created = 0
+
+            for entry in items:
+                try:
+                    loc_id = int(entry["id"])
+                    tips_data = entry.get("tips", [])
+                except (KeyError, ValueError, TypeError) as e:
+                    logger.warning(f"Skipping malformed batch entry: {entry} ({e})")
                     continue
 
-                db.add(Tip(
-                    tip_text=tip_text,
-                    location_id=loc.id,
-                    original_language=language,
-                    status="pending",
-                ))
-                loc_count += 1
+                if loc_id not in loc_map:
+                    logger.warning(f"Response contained unexpected location id {loc_id}, skipping")
+                    continue
+
+                loc = loc_map[loc_id]
+                loc_count = 0
+                for item in tips_data:
+                    tip_text = item.get("tip_text", "").strip()
+                    language = item.get("language", "en").strip()
+                    if not tip_text:
+                        continue
+
+                    db.add(Tip(
+                        tip_text=tip_text,
+                        location_id=loc.id,
+                        original_language=language,
+                        status="pending",
+                    ))
+                    loc_count += 1
+
+                batch_created += loc_count
+                print(f"    {loc.name}, {loc.country}: {loc_count} tips")
 
             db.commit()
-            total_created += loc_count
-            print(f"  {loc.name}, {loc.country}: {loc_count} tips created")
+            total_created += batch_created
 
-            # Small delay to stay within free-tier rate limits
-            time.sleep(1)
+            if batch_idx < len(batches):
+                time.sleep(1)
 
         print(f"\nDone — {total_created} tips created as 'pending'.")
         print("Run the nightly processor to translate, embed, and classify them.")
@@ -208,6 +247,12 @@ if __name__ == "__main__":
         default=None,
         help="Maximum number of locations to process (default: all)",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=DEFAULT_BATCH_SIZE,
+        help=f"Number of locations per Gemini call (default: {DEFAULT_BATCH_SIZE})",
+    )
 
     args = parser.parse_args()
 
@@ -219,4 +264,5 @@ if __name__ == "__main__":
         locations_filter=locations_filter,
         tips_per_location=args.tips_per_location,
         max_locations=args.max_locations,
+        batch_size=args.batch_size,
     )
