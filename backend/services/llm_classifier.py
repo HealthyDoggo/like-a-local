@@ -33,7 +33,7 @@ class LLMClassifier:
     def _build_prompt(self, tip_text: str) -> str:
         return f"""You are a travel tip classifier. Given a travel tip, pick the single best category from the list below.
 
-Be liberal with your classifications — if a tip is even somewhat related to a category, assign it. Only return "none" if the tip truly does not fit any category at all.
+Always prefer the most specific category. Only use "helpful-tips" when no other category fits. Only return "none" if the tip truly does not fit any category at all.
 
 Categories:
 {self._categories_block()}
@@ -52,7 +52,7 @@ Tip: "{tip_text}"
 
         return f"""You are a travel tip classifier. For EACH tip below, pick the single best category from the category list.
 
-Be liberal with your classifications — if a tip is even somewhat related to a category, assign it. Only return "none" if the tip truly does not fit any category at all.
+Always prefer the most specific category. Only use "helpful-tips" when no other category fits. Only return "none" if the tip truly does not fit any category at all.
 
 Categories:
 {self._categories_block()}

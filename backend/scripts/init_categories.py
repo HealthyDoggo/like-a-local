@@ -133,11 +133,11 @@ CATEGORIES = [
         "id": "helpful-tips",
         "title": "Helpful Tips",
         "descriptions": [
-            "Practical advice and safety tips",
-            "Money matters, currency, and ATMs",
-            "Local secrets and insider knowledge",
-            "Bargaining, shopping, and smart strategies",
-            "SIM cards, WiFi, and staying connected"
+            "Money matters, currency exchange, ATMs, and tipping norms",
+            "Personal safety, scams, and avoiding pickpockets",
+            "Bargaining, shopping, and market haggling",
+            "SIM cards, WiFi, power adapters, and staying connected",
+            "Visas, customs, opening hours, and travel logistics"
         ],
         "icon_name": "lightbulb",
         "color": "#FFC107",
