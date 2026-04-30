@@ -4,6 +4,18 @@ import { authService } from '@/services/api/auth.service';
 import { signInWithGoogle as googleSignIn, signOutGoogle } from '@/services/oauth/google.service';
 import { getAccessToken, getRefreshToken, getUserData, setTokens, setUserData, clearAuth, refreshAuthToken } from '@/utils/tokenStorage';
 
+const SKIP_LOGIN = import.meta.env.VITE_SKIP_LOGIN === 'true';
+
+const DEV_USER: User = {
+  id: 0,
+  email: 'dev@localhost',
+  full_name: 'Dev User',
+  profile_picture_url: null,
+  preferred_language: 'en',
+  auth_provider: 'email',
+  email_verified: true,
+};
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -17,16 +29,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(SKIP_LOGIN ? DEV_USER : null);
+  const [isLoading, setIsLoading] = useState(!SKIP_LOGIN);
 
   // Load auth on mount
   useEffect(() => {
-    initializeAuth();
+    if (!SKIP_LOGIN) initializeAuth();
   }, []);
 
   // Listen for forced sign-out (e.g. token refresh failed mid-session)
   useEffect(() => {
+    if (SKIP_LOGIN) return;
     const handleAuthExpired = () => setUser(null);
     window.addEventListener('auth:expired', handleAuthExpired);
     return () => window.removeEventListener('auth:expired', handleAuthExpired);
@@ -34,6 +47,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 
   // Auto-refresh token every 14 minutes
   useEffect(() => {
+    if (SKIP_LOGIN) return;
     if (user) {
       const interval = setInterval(async () => {
         await refreshAuthToken();

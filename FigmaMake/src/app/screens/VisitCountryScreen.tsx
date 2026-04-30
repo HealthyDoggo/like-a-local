@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Input } from '@/app/components/Input';
 import { ListItem } from '@/app/components/ListItem';
 import { useNavigate } from 'react-router';
+import { ArrowLeft } from 'lucide-react';
 import { BottomNav } from '@/app/components/BottomNav';
 import { useCountriesAndCities } from '@/hooks/useCountriesAndCities';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
@@ -35,18 +36,33 @@ export function VisitCountryScreen() {
     country.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const header = (
+    <motion.div
+      initial={reducedMotion ? false : { opacity: 0, y: -10 }}
+      animate={reducedMotion ? false : { opacity: 1, y: 0 }}
+      className="flex items-center mb-6"
+    >
+      <button
+        onClick={() => navigate(-1)}
+        className="p-2 -ml-2"
+        style={{ color: 'var(--app-text-accent)' }}
+      >
+        <ArrowLeft className="w-6 h-6" />
+      </button>
+      <h1
+        className="text-[24px] leading-[28px] ml-2"
+        style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
+      >
+        Select country you're visiting
+      </h1>
+    </motion.div>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-          <motion.h1
-            initial={reducedMotion ? false : { opacity: 0, y: -10 }}
-            animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-            className="text-[24px] leading-[28px] mb-6"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-          >
-            Select country you're visiting
-          </motion.h1>
+          {header}
           <LoadingSpinner />
         </div>
         <BottomNav />
@@ -58,14 +74,7 @@ export function VisitCountryScreen() {
     return (
       <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
         <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-          <motion.h1
-            initial={reducedMotion ? false : { opacity: 0, y: -10 }}
-            animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-            className="text-[24px] leading-[28px] mb-6"
-            style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-          >
-            Select country you're visiting
-          </motion.h1>
+          {header}
           <ErrorMessage message={error} onRetry={reload} />
         </div>
         <BottomNav />
@@ -76,14 +85,7 @@ export function VisitCountryScreen() {
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--app-bg)' }}>
       <div className="px-5" style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1rem))', paddingBottom: '2rem' }}>
-        <motion.h1
-          initial={reducedMotion ? false : { opacity: 0, y: -10 }}
-          animate={reducedMotion ? false : { opacity: 1, y: 0 }}
-          className="text-[24px] leading-[28px] mb-6"
-          style={{ color: 'var(--app-text-primary)', fontWeight: 600 }}
-        >
-          Select country you're visiting
-        </motion.h1>
+        {header}
 
         <div className="mb-6">
           <Input

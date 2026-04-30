@@ -35,6 +35,10 @@ export function SplashScreen() {
   const { reducedMotion } = useSettings();
 
   useEffect(() => {
+    if (import.meta.env.VITE_SKIP_LOGIN === 'true') {
+      navigate('/home', { replace: true });
+      return;
+    }
     const interval = setInterval(() => {
       setCurrentWelcomeIndex((prev) => (prev + 1) % welcomeTranslations.length);
     }, 4000);
