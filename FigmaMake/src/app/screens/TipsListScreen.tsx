@@ -27,6 +27,7 @@ export function TipsListScreen() {
     id: String(tip.id),
     category: category,
     text: tip.tip_text,
+    nativeText: tip.original_text,
     supportingText: `${tip.mention_count} locals mentioned this`,
     city: city,
     country: country,
@@ -149,6 +150,7 @@ export function TipsListScreen() {
                   id={tip.id}
                   category={tip.category}
                   text={tip.text}
+                  nativeText={tip.nativeText}
                   supportingText={tip.supportingText}
                   isSaved={isSaved(tip.id)}
                   onSave={handleSave}

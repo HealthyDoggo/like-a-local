@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Heart, Volume2 } from 'lucide-react';
+import { Heart, Volume2, Languages } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -11,6 +11,7 @@ interface TipCardProps {
   text: string;
   supportingText?: string;
   highlightKeywords?: string[];
+  nativeText?: string;
   isSaved?: boolean;
   onSave?: (id: string) => void;
   onAuthRequired?: () => void;
@@ -21,9 +22,10 @@ export function TipCard({
   id = '1',
   category = 'General',
   title,
-  text, 
-  supportingText, 
+  text,
+  supportingText,
   highlightKeywords = [],
+  nativeText,
   isSaved = false,
   onSave,
   onAuthRequired,
@@ -33,6 +35,7 @@ export function TipCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [saved, setSaved] = useState(isSaved);
   const [isReading, setIsReading] = useState(false);
+  const [showNative, setShowNative] = useState(false);
   const settings = useSettings();
   const { readingMode, readAloud: readAloudEnabled, reducedMotion } = settings;
 
@@ -77,7 +80,8 @@ export function TipCard({
     }
   };
 
-  const truncatedText = text.length > 120 && !isExpanded ? text.substring(0, 120) + '...' : text;
+  const displayText = showNative && nativeText ? nativeText : text;
+  const truncatedText = displayText.length > 120 && !isExpanded ? displayText.substring(0, 120) + '...' : displayText;
   const textSize = readingMode ? 'text-[20px] leading-[30px]' : 'text-[15px] leading-[22px]';
   const spacing = readingMode ? 'p-5' : 'p-4';
 
@@ -100,6 +104,20 @@ export function TipCard({
           )}
         </div>
         <div className="flex items-center gap-1 -mt-1 -mr-1">
+          {nativeText && (
+            <motion.button
+              onClick={() => setShowNative(!showNative)}
+              className="p-1"
+              whileTap={reducedMotion ? {} : { scale: 0.9 }}
+            >
+              <Languages
+                className="w-5 h-5"
+                style={{
+                  color: showNative ? 'var(--app-text-accent)' : 'var(--app-text-secondary)',
+                }}
+              />
+            </motion.button>
+          )}
           {readAloudEnabled && (
             <motion.button
               onClick={handleReadAloud}
@@ -108,7 +126,7 @@ export function TipCard({
             >
               <Volume2
                 className="w-5 h-5"
-                style={{ 
+                style={{
                   color: isReading ? 'var(--app-text-accent)' : 'var(--app-text-secondary)',
                   fill: isReading ? 'var(--app-text-accent)' : 'none',
                 }}
@@ -150,7 +168,7 @@ export function TipCard({
         </p>
       )}
 
-      {text.length > 120 && (
+      {displayText.length > 120 && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={`${readingMode ? 'text-[16px]' : 'text-[13px]'} mt-2`}

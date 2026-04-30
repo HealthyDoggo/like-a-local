@@ -38,6 +38,7 @@ export interface TipCreate {
 export interface PromotedTipResponse {
   id: number;
   tip_text: string;
+  original_text?: string;
   location_id: number;
   location_name?: string;
   location_country?: string;
